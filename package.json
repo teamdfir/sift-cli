@@ -1,0 +1,38 @@
+{
+  "name": "sift-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sift-cli.js",
+  "bin": {
+    "sift-cli": "sift-cli.js"
+  },
+  "scripts": {
+    "pkg:prep": "jo branch=$(git rev-parse --abbrev-ref HEAD) commit=$(git rev-parse --short HEAD) rollbar=$(echo $ROLLBAR_SECRET) > config.json",
+    "pkg:build": "pkg -t node7-macos,node7-linux --out-dir release package.json",
+    "pkg": "npm run pkg:prep && npm run pkg:build"
+  },
+  "keywords": [],
+  "author": "Erik Kristensen <erik@erikkristensen.com>",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "bluebird-co": "^2.2.0",
+    "dirty": "^1.1.0",
+    "docopt": "^0.6.2",
+    "github": "^9.2.0",
+    "mkdirp": "^0.5.1",
+    "openpgp": "^2.5.4",
+    "pseudomap": "^1.0.2",
+    "request": "^2.81.0",
+    "rollbar": "^2.0.4",
+    "username": "^2.3.0"
+  },
+  "devDependencies": {
+    "pkg": "^4.0.0"
+  },
+  "pkg": {
+    "scripts": [
+      "node_modules/github/lib/routes.json"
+    ]
+  }
+}

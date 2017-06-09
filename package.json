@@ -1,7 +1,7 @@
 {
   "name": "sift-cli",
-  "version": "1.1.0",
-  "description": "",
+  "version": "1.1.1",
+  "description": "Manage your SIFT installation",
   "main": "sift-cli.js",
   "bin": {
     "sift-cli": "sift-cli.js"
@@ -9,7 +9,9 @@
   "scripts": {
     "pkg:prep": "jo branch=$(git rev-parse --abbrev-ref HEAD) commit=$(git rev-parse --short HEAD) rollbar=$(echo $ROLLBAR_SECRET) > config.json",
     "pkg:build": "pkg -t node7-macos,node7-linux --out-dir release package.json",
-    "pkg": "npm run pkg:prep && npm run pkg:build"
+    "pkg:hash": "rm release/sift-cli-linux.sha256 && shasum -a 256 release/sift-cli-linux > release/sift-cli-linux.sha256",
+    "pkg:sign": "rm release/sift-cli-linux.sha256.asc && gpg --armor --clearsign --digest-algo SHA256 -u 22598A94 release/sift-cli-linux.sha256",
+    "pkg": "npm run pkg:prep && npm run pkg:build && npm run pkg:hash && npm run pkg:sign"
   },
   "keywords": [],
   "author": "Erik Kristensen <erik@erikkristensen.com>",

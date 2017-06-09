@@ -391,22 +391,28 @@ co.execute(function * () {
   
   console.log(`> sift-cli@${pkg.version}-${cfg.branch}.${cfg.commit}`)
 
+  yield setup()
+
   const version = yield getCurrentVersion()
   console.log(`> sift-version: ${version}\n`)
+
+  if (cli['list-upgrades'] === true) {
+    const releases = yield getValidReleases()
+    if (releases.length === 0) {
+      console.log('No upgrades available')
+      return process.exit(0)
+    }
+
+    console.log('> List of available releases')
+    releases.forEach(release => console.log(`  - ${release}`))
+    return process.exit(0)
+  }
 
   const whoIAm = username.sync()
   
   if (whoIAm !== 'root' && cli['--dev'] === false) {
     console.log('> Error! You must be root to execute this.')
-    process.exit(1)
-  }
-
-  yield setup()
-
-  if (cli['list-upgrades'] === true) {
-    const releases = yield getValidReleases()
-    console.log('> List of available releases')
-    releases.forEach(release => console.log(`  - ${release}`))
+    return process.exit(1)
   }
 
   if (cli['update'] === true) {

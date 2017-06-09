@@ -113,16 +113,24 @@ function setup () {
     }
 
     yield mkdirp(cachePath)
+  })
+}
 
-    if (cli['--dev'] === false) {
+function setupSalt() {
+  if (cli['--dev'] === false) {
+    return co.execute(function * () {
       const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
-    
+  
       yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest xenial main')
       yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest/SALTSTACK-GPG-KEY.pub | apt-key add -')
       yield child_process.execAsync('apt-get update')
       yield child_process.execAsync('apt-get install -y salt-minion')
-    }
-  })
+    })
+  } else {
+    return new Promise((resolve, reject) => {
+      resolve()
+    })
+  }
 }
 
 function getCurrentVersion () {
@@ -156,8 +164,8 @@ function getValidReleases () {
     }
 
     let curIndex = allReleases.indexOf(currentRelease)
-    if (curIndex === -1) {
-
+    if (curIndex === 0) {
+      return []
     }
 
     if (cli['--pre-release'] === true) {
@@ -414,6 +422,8 @@ co.execute(function * () {
     console.log('> Error! You must be root to execute this.')
     return process.exit(1)
   }
+
+  yield setupSalt()
 
   if (cli['update'] === true) {
     if (version === 'notinstalled') {

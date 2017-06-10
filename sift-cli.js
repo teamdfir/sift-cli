@@ -24,7 +24,6 @@ Usage:
   sift [options] install [--pre-release] <version>
   sift [options] update
   sift [options] upgrade [--pre-release]
-
   sift -h | --help | --version
 
 Options:

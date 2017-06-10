@@ -2,3 +2,4 @@ node_modules
 release
 config.json
 .*rc
+extras

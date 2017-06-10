@@ -1,6 +1,6 @@
 {
   "name": "sift-cli",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Manage your SIFT installation",
   "main": "sift-cli.js",
   "bin": {
@@ -19,14 +19,14 @@
   "dependencies": {
     "bluebird": "^3.5.0",
     "bluebird-co": "^2.2.0",
-    "dirty": "^1.1.0",
     "docopt": "^0.6.2",
     "github": "^9.2.0",
+    "js-yaml": "^3.8.4",
     "mkdirp": "^0.5.1",
     "openpgp": "^2.5.4",
-    "pseudomap": "^1.0.2",
     "request": "^2.81.0",
     "rollbar": "^2.0.4",
+    "split": "^1.0.0",
     "username": "^2.3.0"
   },
   "devDependencies": {
@@ -36,5 +36,6 @@
     "scripts": [
       "node_modules/github/lib/routes.json"
     ]
-  }
+  },
+  "false": {}
 }

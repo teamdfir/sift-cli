@@ -15,6 +15,8 @@ const request = require('request')
 const openpgp = require('openpgp')
 const Rollbar = require('rollbar')
 const username = require('username')
+const split = require('split')
+const yaml = require('js-yaml')
 
 const doc = `
 Usage:
@@ -97,6 +99,7 @@ const rollbar = new Rollbar({
 const user = { id: crypto.createHash('sha256').update(username.sync()).digest('hex').substr(0, 35) }
 
 function error (err) {
+  console.log('')
   console.log(err.message)
   console.log(err.stack)
 
@@ -345,9 +348,12 @@ function downloadUpdate(version) {
 
 function performUpdate(version) {
   const filepath = `${cachePath}/${version}/sift-saltstack-${version.replace('v', '')}`
-  const outputFilepath = `${cachePath}/${version}/results.json`
+  const outputFilepath = `${cachePath}/${version}/results.yml`
   const logFilepath = `${cachePath}/${version}/saltstack.log`
-  
+
+  const begRegex = /Running state \[(.*)\] at time (.*)/g
+  const endRegex = /Completed state \[(.*)\] at time (.*) duration_in_ms=(.*)/g
+
   return new Promise((resolve, reject) => {
     console.log(`> performing update ${version}`)
 
@@ -362,19 +368,29 @@ function performUpdate(version) {
     let stderr = ''
     
     const logFile = fs.createWriteStream(logFilepath)
-    
-    const update = spawn('salt-call', ['-l', 'info', '--local', '--file-root', filepath, 'state.apply', 'sift.vm'])
-    update.stdout.on('data', (data) => {
-      stdout = `${stdout}${data}`
-      console.log(data.toString())
-    })
+
+    const update = spawn('salt-call', ['-l', 'info', '--local', '--file-root', filepath, '--state-output=terse', '--out=yaml', 'state.apply', 'sift.vm'])
     update.stdout.pipe(fs.createWriteStream(outputFilepath))
     update.stdout.pipe(logFile)
-    update.stderr.on('data', (data) => {
-      stderr = `${stderr}${data}`
-      console.log(data.toString())
-    })
+
     update.stderr.pipe(logFile)
+    update.stderr
+      .pipe(split())
+      .on('data', (data) => {
+        stderr = `${stderr}${data}`
+
+        const begMatch = begRegex.exec(data)
+        const endMatch = endRegex.exec(data)
+
+        if (begMatch !== null) {
+          process.stdout.write(`\n>> Running: ${begMatch[1]}\r`)
+        } else if (endMatch !== null) {
+          process.stdout.clearLine();  // clear current text
+          process.stdout.cursorTo(0);
+          process.stdout.write(`>> Completed: ${endMatch[1]} (Took: ${endMatch[3]} ms)\r`)
+        }
+      })
+
     update.on('error', (err) => {
       console.log(arguments)
       rollbar.error(err, {version}, { user, route: { path: 'performUpdate' }})
@@ -386,8 +402,34 @@ function performUpdate(version) {
         return reject(new Error('Update returned exit code not zero'))
       }
 
-      resolve()
+      process.nextTick(resolve)
     })
+  })
+}
+
+function summarizeResults (version) {
+  return co.execute(function * () {
+    const outputFilepath = `${cachePath}/${version}/results.yml`
+    const rawContents = yield fs.readFileAsync(outputFilepath)
+    const results = yaml.safeLoad(rawContents)
+
+    let success = 0
+    let failure = 0
+
+    Object.keys(results['local']).forEach((key) => {
+      if (results['local'][key]['result'] === true) {
+        success++
+      } else {
+        failure++
+      }
+    })
+
+    if (failure > 0) {
+      console.log(`>> Completed with Failures -- Success: ${success}, Failure: ${failure}`)
+      return new Promise((resolve, reject) => { return resolve() })
+    }
+
+    console.log(`>> COMPLETED SUCCESSFULLY -- Success: ${success}, Failure: ${failure}`)
   })
 }
 
@@ -432,20 +474,22 @@ co.execute(function * () {
 
     yield downloadUpdate(version)
     yield performUpdate(version)
+    yield summarizeResults(version)
   }
 
   if (cli['install'] === true) {
     yield validateVersion(cli['<version>'])
     yield downloadUpdate(cli['<version>'])
     yield performUpdate(cli['<version>'])
+    yield summarizeResults(cli['<version>'])
   }
 
   if (cli['upgrade'] === true) {
     const release = yield getLatestRelease()
     yield downloadUpdate(release)
     yield performUpdate(release)
+    yield summarizeResults(release)
   }
   
   
 }).catch(error)
-

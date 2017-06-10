@@ -167,21 +167,21 @@ function getValidReleases () {
 
     let curIndex = allReleases.indexOf(currentRelease)
     if (curIndex === 0) {
-      return []
+      return [allReleases[0]]
     }
 
     if (cli['--pre-release'] === true) {
       return allReleases.slice(0, curIndex)
     }
 
-    return allReleases.filter((release) => {
+    return allReleases.slice(0, curIndex).filter((release) => {
       return realReleases.indexOf(release) !== -1
     })
   })
 }
 
 function getLatestRelease () {
-  return getValidReleases().then(releases => releases[0] || null)
+  return getValidReleases().then(releases => releases[0])
 }
 
 function validateVersion (version) {
@@ -447,7 +447,8 @@ co.execute(function * () {
 
   if (cli['list-upgrades'] === true) {
     const releases = yield getValidReleases()
-    if (releases.length === 0) {
+    const current = yield getCurrentVersion()
+    if (releases.length === 0 || releases[0] === current) {
       console.log('No upgrades available')
       return process.exit(0)
     }
@@ -485,8 +486,9 @@ co.execute(function * () {
 
   if (cli['upgrade'] === true) {
     const release = yield getLatestRelease()
+    const current = yield getCurrentVersion()
 
-    if (release === null) {
+    if (release === current || typeof release === 'undefined') {
       console.log('No upgrades available')
       process.exit(0)
     }

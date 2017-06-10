@@ -181,7 +181,7 @@ function getValidReleases () {
 }
 
 function getLatestRelease () {
-  return getValidReleases().then(releases => releases[0])
+  return getValidReleases().then(releases => releases[0] || null)
 }
 
 function validateVersion (version) {
@@ -485,6 +485,12 @@ co.execute(function * () {
 
   if (cli['upgrade'] === true) {
     const release = yield getLatestRelease()
+
+    if (release === null) {
+      console.log('No upgrades available')
+      process.exit(0)
+    }
+
     yield downloadUpdate(release)
     yield performUpdate(release)
     yield summarizeResults(release)

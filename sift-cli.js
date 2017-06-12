@@ -142,8 +142,9 @@ function setupSalt() {
       const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
   
       const aptExists = yield fileExists(aptSourceList)
+      const saltExists = yield fileExists('/usr/bin/salt-call')
 
-      if (aptExists === false) {
+      if (aptExists === false || saltExists === false) {
         console.log('Installing and configuring SaltStack properly ...')
         yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest xenial main')
         yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest/SALTSTACK-GPG-KEY.pub | apt-key add -')

@@ -25,6 +25,7 @@ Usage:
   sift [options] install [--pre-release] <version>
   sift [options] update
   sift [options] upgrade [--pre-release]
+  sift [options] version
   sift -h | --help | --version
 
 Options:
@@ -75,7 +76,7 @@ xUlS5QCeIuCyDm3icTtEq3/j6MpEjUkrMJk=
 -----END PGP PUBLIC KEY BLOCK-----
 `
 
-let cachePath = '/var/cache/sift'
+let cachePath = '/var/cache/sift/cli'
 let versionFile = '/etc/sift-version'
 
 const cli = docopt(doc)
@@ -119,15 +120,36 @@ function setup () {
   })
 }
 
+function fileExists (path) {
+  return new Promise((resolve, reject) => {
+    fs.stat(path, function (err, stats) {
+      if (err && err.code === 'ENOENT') {
+        return resolve(false)
+      }
+      
+      if (err) {
+        return reject(err)
+      }
+      
+      return resolve(true)
+    })
+  })
+}
+
 function setupSalt() {
   if (cli['--dev'] === false) {
     return co.execute(function * () {
       const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
   
-      yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest xenial main')
-      yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest/SALTSTACK-GPG-KEY.pub | apt-key add -')
-      yield child_process.execAsync('apt-get update')
-      yield child_process.execAsync('apt-get install -y salt-minion')
+      const aptExists = yield fileExists(aptSourceList)
+
+      if (aptExists === false) {
+        console.log('Installing and configuring SaltStack properly ...')
+        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest xenial main')
+        yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest/SALTSTACK-GPG-KEY.pub | apt-key add -')
+        yield child_process.execAsync('apt-get update')
+        yield child_process.execAsync('apt-get install -y salt-minion')
+      }
     })
   } else {
     return new Promise((resolve, reject) => {
@@ -429,11 +451,11 @@ function summarizeResults (version) {
     })
 
     if (failure > 0) {
-      console.log(`>> Completed with Failures -- Success: ${success}, Failure: ${failure}`)
+      console.log(`\n\n>> Completed with Failures -- Success: ${success}, Failure: ${failure}`)
       return new Promise((resolve, reject) => { return resolve() })
     }
 
-    console.log(`>> COMPLETED SUCCESSFULLY -- Success: ${success}, Failure: ${failure}`)
+    console.log(`\n\n>> COMPLETED SUCCESSFULLY -- Success: ${success}, Failure: ${failure}`)
   })
 }
 
@@ -449,6 +471,10 @@ co.execute(function * () {
 
   const version = yield getCurrentVersion()
   console.log(`> sift-version: ${version}\n`)
+
+  if (cli['version'] === true) {
+    return process.exit(0)
+  }
 
   if (cli['list-upgrades'] === true) {
     const releases = yield getValidReleases()
@@ -502,6 +528,4 @@ co.execute(function * () {
     yield performUpdate(release)
     yield summarizeResults(release)
   }
-  
-  
 }).catch(error)

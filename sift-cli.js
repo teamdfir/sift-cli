@@ -15,6 +15,7 @@ const request = require('request')
 const openpgp = require('openpgp')
 const Rollbar = require('rollbar')
 const username = require('username')
+const readline = require('readline')
 const split = require('split')
 const yaml = require('js-yaml')
 
@@ -384,9 +385,13 @@ function performUpdate(version) {
         if (begMatch !== null) {
           process.stdout.write(`\n>> Running: ${begMatch[1]}\r`)
         } else if (endMatch !== null) {
-          process.stdout.clearLine();  // clear current text
-          process.stdout.cursorTo(0);
-          process.stdout.write(`>> Completed: ${endMatch[1]} (Took: ${endMatch[3]} ms)\r`)
+          let message = `>> Completed: ${endMatch[1]} (Took: ${endMatch[3]} ms)`
+          if (process.stdout.isTTY === true) {
+            readline.clearLine(process.stdout, 0)
+            readline.cursorTo(process.stdout, 0)
+          }
+
+          process.stdout.write(`${message}`)
         }
       })
 

@@ -22,14 +22,16 @@ const yaml = require('js-yaml')
 const doc = `
 Usage:
   sift [options] list-upgrades [--pre-release]
-  sift [options] install [--pre-release] <version>
+  sift [options] install [--pre-release] [--version=<version>]
   sift [options] update
   sift [options] upgrade [--pre-release]
   sift [options] version
-  sift -h | --help | --version
+  sift -h | --help | -v
 
 Options:
-  --dev   Developer Mode (do not use, dangerous, bypasses checks)
+  --dev                 Developer Mode (do not use, dangerous, bypasses checks)
+  --version=<version>   Specific version install [default: latest]
+  --no-cache            Ignore the cache, always download the release files
 `
 
 const pubKey = `
@@ -208,6 +210,17 @@ function getLatestRelease () {
   return getValidReleases().then(releases => releases[0])
 }
 
+function isValidRelease (version) {
+  return getValidReleases().then((releases) => {
+    return new Promise((resolve, reject) => {
+      if (releases.indexOf(version) === -1) {
+        return resolve(false)
+      }
+      resolve(true)
+    })
+  })
+}
+
 function validateVersion (version) {
   return getValidReleases().then((releases) => {
     if (typeof releases.indexOf(version) === -1) {
@@ -222,7 +235,7 @@ function downloadReleaseFile (version, filename) {
   
   const filepath = `${cachePath}/${version}/${filename}`
   
-  if (fs.existsSync(filepath)) {
+  if (fs.existsSync(filepath) && cli['--no-cache'] === false) {
     return new Promise((resolve, reject) => { resolve() })
   }
   
@@ -253,7 +266,7 @@ function downloadRelease (version) {
   
   const filepath = `${cachePath}/${version}/sift-saltstack-${version}.tar.gz`
   
-  if (fs.existsSync(filepath)) {
+  if (fs.existsSync(filepath) && cli['--no-cache'] === false) {
     return new Promise((resolve, reject) => { resolve() })
   }
   
@@ -384,7 +397,7 @@ function performUpdate(version) {
     
     if (os.platform() !== 'linux') {
       console.log(`>>> Platform is not linux`)
-      return reject(new Error('Platform is not linux'))
+      return process.exit(0)
     }
 
     let stdout = ''
@@ -392,7 +405,7 @@ function performUpdate(version) {
     
     const logFile = fs.createWriteStream(logFilepath)
 
-    const update = spawn('salt-call', ['-l', 'info', '--local', '--file-root', filepath, '--state-output=terse', '--out=yaml', 'state.apply', 'sift.vm'])
+    const update = spawn('salt-call', ['-l', 'debug', '--local', '--file-root', filepath, '--state-output=terse', '--out=yaml', 'state.apply', 'sift.vm'])
     update.stdout.pipe(fs.createWriteStream(outputFilepath))
     update.stdout.pipe(logFile)
 
@@ -461,7 +474,7 @@ function summarizeResults (version) {
 }
 
 co.execute(function * () {
-  if (cli['--version'] === true) {
+  if (cli['-v'] === true) {
     console.log(`Version: ${pkg.version}, Build: ${cfg.branch}-${cfg.commit}`)
     return process.exit(0)
   }
@@ -510,10 +523,35 @@ co.execute(function * () {
   }
 
   if (cli['install'] === true) {
-    yield validateVersion(cli['<version>'])
-    yield downloadUpdate(cli['<version>'])
-    yield performUpdate(cli['<version>'])
-    yield summarizeResults(cli['<version>'])
+    const currentVersion = yield getCurrentVersion(versionFile)
+
+    if (currentVersion !== 'notinstalled') {
+      console.log('SIFT already installed, please use the update or upgrade command')
+      return process.exit(0)
+    }
+
+    let versionToInstall = null
+    if (cli['--version'] === 'latest') {
+      versionToInstall = yield getLatestRelease()
+    } else {
+      const validRelease = yield isValidRelease(cli['--version'])
+      
+      if (validRelease === false) {
+        console.log(`${cli['--version']} is not a valid release of the SIFT Workstation`)
+        return process.exit(5)
+      }
+      
+      versionToInstall = cli['--version']
+    }
+
+    if (versionToInstall === null) {
+      throw new Error('versionToInstall was null, this should never happen, a bug was reported')
+    }
+
+    yield validateVersion(versionToInstall)
+    yield downloadUpdate(versionToInstall)
+    yield performUpdate(versionToInstall)
+    yield summarizeResults(versionToInstall)
   }
 
   if (cli['upgrade'] === true) {

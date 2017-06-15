@@ -19,10 +19,12 @@ const readline = require('readline')
 const split = require('split')
 const yaml = require('js-yaml')
 
+const currentUser = process.env.SUDO_USER || username.sync()
+
 const doc = `
 Usage:
   sift [options] list-upgrades [--pre-release]
-  sift [options] install [--pre-release] [--version=<version>]
+  sift [options] install [--pre-release] [--version=<version>] [--mode=<mode>] [--user=<user>]
   sift [options] update
   sift [options] upgrade [--pre-release]
   sift [options] version
@@ -31,6 +33,8 @@ Usage:
 Options:
   --dev                 Developer Mode (do not use, dangerous, bypasses checks)
   --version=<version>   Specific version install [default: latest]
+  --mode=<mode>         SIFT Install Mode (complete or packages-only) [default: complete]
+  --user=<user>         User used for SIFT config [default: ${currentUser}]
   --no-cache            Ignore the cache, always download the release files
 `
 
@@ -80,6 +84,8 @@ xUlS5QCeIuCyDm3icTtEq3/j6MpEjUkrMJk=
 
 let cachePath = '/var/cache/sift/cli'
 let versionFile = '/etc/sift-version'
+let configFile = '/etc/sift-config'
+let siftConfiguration = {}
 
 const cli = docopt(doc)
 
@@ -99,7 +105,7 @@ const rollbar = new Rollbar({
   handleUnhandledRejections: true,
 })
 
-const user = { id: crypto.createHash('sha256').update(username.sync()).digest('hex').substr(0, 35) }
+const user = { id: crypto.createHash('sha256').update(currentUser).digest('hex').substr(0, 35) }
 
 function error (err) {
   console.log('')
@@ -116,9 +122,22 @@ function setup () {
     if (cli['--dev'] === true) {
       cachePath = '/tmp/var/cache/sift'
       versionFile = '/tmp/sift-version'
+      configFile = '/tmp/sift-config'
     }
 
     yield mkdirp(cachePath)
+  })
+}
+
+function checkOptions () {
+  return new Promise((resolve, reject) => {
+    const validModes = ['complete', 'packages-only']
+    
+    if (validModes.indexOf(cli['--mode']) === -1) {
+      return reject(new Error(`${cli['--mode']} is not a valid install mode. Valid Modes: ${validModes.join(', ')}`))
+    }
+
+    resolve()
   })
 }
 
@@ -390,6 +409,11 @@ function performUpdate(version) {
   const begRegex = /Running state \[(.*)\] at time (.*)/g
   const endRegex = /Completed state \[(.*)\] at time (.*) duration_in_ms=(.*)/g
 
+  const stateApplyMap = {
+    'complete': 'sift.vm',
+    'packages-only': 'sift.pkgs'
+  }
+
   return new Promise((resolve, reject) => {
     console.log(`> performing update ${version}`)
 
@@ -405,7 +429,16 @@ function performUpdate(version) {
     
     const logFile = fs.createWriteStream(logFilepath)
 
-    const update = spawn('salt-call', ['-l', 'debug', '--local', '--file-root', filepath, '--state-output=terse', '--out=yaml', 'state.apply', 'sift.vm'])
+    const updateArgs = [
+      '-l', 'debug', '--local',
+      '--file-root', filepath,
+      '--state-output=terse',
+      '--out=yaml',
+      'state.apply', stateApplyMap[cli['--mode']],
+      `pillar={sift_user: "${siftConfiguration['user']}"}`
+    ]
+
+    const update = spawn('salt-call', updateArgs)
     update.stdout.pipe(fs.createWriteStream(outputFilepath))
     update.stdout.pipe(logFile)
 
@@ -473,6 +506,33 @@ function summarizeResults (version) {
   })
 }
 
+function saveConfiguration (version) {
+  const config = {
+    version: version,
+    mode: cli['--mode'],
+    user: cli['--user']
+  }
+
+  return fs.writeFileAsync(configFile, yaml.safeDump(config))
+}
+
+function loadConfiguration () {
+  return fs.readFileAsync(configFile)
+            .then((contents) => {
+              return yaml.safeLoad(contents)
+            })
+            .catch((err) => {
+              if (err.code === 'ENOENT') {
+                return {
+                  mode: cli['--mode'],
+                  user: cli['--user']
+                }
+              }
+              
+              throw err
+            })
+}
+
 co.execute(function * () {
   if (cli['-v'] === true) {
     console.log(`Version: ${pkg.version}, Build: ${cfg.branch}-${cfg.commit}`)
@@ -481,7 +541,18 @@ co.execute(function * () {
   
   console.log(`> sift-cli@${pkg.version}-${cfg.branch}.${cfg.commit}`)
 
+  yield checkOptions().catch((err) => {
+    if (err.message.indexOf('is not a valid install mode') === -1) {
+      throw err
+    }
+    
+    console.log(`\n${err.message}`)
+    return process.exit(2)
+  })
+
   yield setup()
+
+  siftConfiguration = yield loadConfiguration()
 
   const version = yield getCurrentVersion()
   console.log(`> sift-version: ${version}\n`)
@@ -502,10 +573,8 @@ co.execute(function * () {
     releases.forEach(release => console.log(`  - ${release}`))
     return process.exit(0)
   }
-
-  const whoIAm = username.sync()
   
-  if (whoIAm !== 'root' && cli['--dev'] === false) {
+  if (!process.env.SUDO_USER && cli['--dev'] === false) {
     console.log('> Error! You must be root to execute this.')
     return process.exit(1)
   }
@@ -552,6 +621,7 @@ co.execute(function * () {
     yield downloadUpdate(versionToInstall)
     yield performUpdate(versionToInstall)
     yield summarizeResults(versionToInstall)
+    yield saveConfiguration(versionToInstall)
   }
 
   if (cli['upgrade'] === true) {

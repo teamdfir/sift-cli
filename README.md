@@ -37,7 +37,8 @@ Open issues over at the main [SIFT Repository](https://github.com/sans-dfir/sift
     * You'll see an error about improperly formatted lines, it
       can be ignored so long as you see `sift-cli-linux: OK` before it
 6. Move the file to `mv sift-cli-linux /usr/local/bin/sift`
-7. Type `sift --help` to see its usage
+7. Navigate to `/usr/local/bin/` and right click `sift`, select `Properties`, click `Permissions` tab, change `Others Access: Read and Write` and check `Allow executing file as program` in order to access in terminal without receiving `Permissions denied` error
+8. Type `sift --help` to see its usage
 
 ## Examples
 

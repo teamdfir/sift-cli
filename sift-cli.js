@@ -17,7 +17,19 @@ const Rollbar = require('rollbar')
 const username = require('username')
 const readline = require('readline')
 const split = require('split')
+
+/**
+ * Setup Custom YAML Parsing
+ */
 const yaml = require('js-yaml')
+const PythonUnicodeType = new yaml.Type('tag:yaml.org,2002:python/unicode', {
+  kind: 'scalar',
+  construct: function (data) { return data !== null ? data : ''; }
+})
+const PYTHON_SCHEMA = new yaml.Schema({
+  include: [ yaml.DEFAULT_SAFE_SCHEMA ],
+  explicit: [ PythonUnicodeType ]
+})
 
 const currentUser = process.env.SUDO_USER || username.sync()
 
@@ -28,6 +40,7 @@ Usage:
   sift [options] update
   sift [options] upgrade [--pre-release]
   sift [options] version
+  sift [options] debug
   sift -h | --help | -v
 
 Options:
@@ -484,7 +497,13 @@ function summarizeResults (version) {
   return co.execute(function * () {
     const outputFilepath = `${cachePath}/${version}/results.yml`
     const rawContents = yield fs.readFileAsync(outputFilepath)
-    const results = yaml.safeLoad(rawContents)
+    let results = {}
+
+    try {
+      results = yaml.safeLoad(rawContents, { schema: PYTHON_SCHEMA })
+    } catch (err) {
+      rollbar.error(err, {version}, { user, route: { path: 'summarizeResults' }})
+    }
 
     let success = 0
     let failure = 0
@@ -540,6 +559,31 @@ co.execute(function * () {
   }
   
   console.log(`> sift-cli@${pkg.version}-${cfg.branch}.${cfg.commit}`)
+
+  if (cli['debug'] === true) {
+    const config = yield loadConfiguration()
+
+    const debug = `
+Version: ${pkg.version}
+Build: ${cfg.branch}-${cfg.commit}
+User: ${currentUser}
+
+Config:
+${yaml.safeDump(config)}
+`
+    console.log(debug)
+    return process.exit(0)
+  }
+
+  if (currentUser === 'root') {
+    console.log('Warning: You are running as root.')
+    if (currentUser === cli['--user']) {
+      console.log('Error: You cannot install as root without specifying the --user option.')
+      console.log()
+      console.log('The install user specified with --user must not be the root user.')
+      return process.exit(5)
+    }
+  }
 
   yield checkOptions().catch((err) => {
     if (err.message.indexOf('is not a valid install mode') === -1) {

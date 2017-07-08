@@ -37,7 +37,8 @@ Open issues over at the main [SIFT Repository](https://github.com/sans-dfir/sift
     * You'll see an error about improperly formatted lines, it
       can be ignored so long as you see `sift-cli-linux: OK` before it
 6. Move the file to `mv sift-cli-linux /usr/local/bin/sift`
-7. Type `sift --help` to see its usage
+7. Run `chmod 755 /usr/local/bin/sift`
+8. Type `sift --help` to see its usage
 
 ## Examples
 

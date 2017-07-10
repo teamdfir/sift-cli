@@ -33,8 +33,8 @@ Open issues over at the main [SIFT Repository](https://github.com/sans-dfir/sift
     * sift-cli-linux.sha256.asc
 3. Import the PGP Key - `gpg --keyserver pgp.mit.edu --recv-keys 22598A94`
 4. Validate the signature `gpg --verify sift-cli-linux.sha256.asc`
-5. Validate SHA256 signature `sha -a 256 -c sift-cli-linux.sha256.asc`
-    * You'll see an error about improperly formatted lines, it
+5. Validate SHA256 signature `shasum -a 256 -c sift-cli-linux.sha256.asc` OR `sha256sum -c sift-cli-linux.sha256.asc`
+    * Note: You'll see an error about improperly formatted lines, it
       can be ignored so long as you see `sift-cli-linux: OK` before it
 6. Move the file to `mv sift-cli-linux /usr/local/bin/sift`
 7. Run `chmod 755 /usr/local/bin/sift`

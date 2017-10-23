@@ -36,7 +36,7 @@ Open issues over at the main [SIFT Repository](https://github.com/sans-dfir/sift
 5. Validate SHA256 signature `shasum -a 256 -c sift-cli-linux.sha256.asc` OR `sha256sum -c sift-cli-linux.sha256.asc`
     * Note: You'll see an error about improperly formatted lines, it
       can be ignored so long as you see `sift-cli-linux: OK` before it
-6. Move the file to `mv sift-cli-linux /usr/local/bin/sift`
+6. Move the file to `sudo mv sift-cli-linux /usr/local/bin/sift`
 7. Run `chmod 755 /usr/local/bin/sift`
 8. Type `sift --help` to see its usage
 

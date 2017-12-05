@@ -1,3 +1,5 @@
+[![Logo](https://digital-forensics.sans.org/images/sift.png)
+
 # SIFT CLI
 
 Manage your SIFT Installation

@@ -170,18 +170,45 @@ function fileExists (path) {
   })
 }
 
+function saltCheckVersion (path, value) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, 'utf8', (err, contents) => {
+      if (err) {
+        return reject(err);
+      }
+
+      if (value === contents) {
+        return resolve(true);
+      }
+      
+      return resolve(false);
+    })
+  })
+}
+
+
 function setupSalt() {
   if (cli['--dev'] === false) {
     return co.execute(function * () {
       const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
+      const aptDebString = 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main'
   
       const aptExists = yield fileExists(aptSourceList)
       const saltExists = yield fileExists('/usr/bin/salt-call')
+      const saltVersionOk = yield saltCheckVersion(aptSourceList, aptDebString)
 
-      if (aptExists === false || saltExists === false) {
+      if (aptExists === true && saltVersionOk === false) {
+        console.log('NOTICE: Fixing incorrect Saltstack configuration.')
+        console.log('Installing and configuring Saltstack properly ...')
+        yield child_process.execAsync('apt-get remove -y salt-minion salt-common')
+        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main')
+        yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
+        yield child_process.execAsync('apt-get update')
+        yield child_process.execAsync('apt-get install -y salt-minion')
+      } else if (aptExists === false || saltExists === false) {
         console.log('Installing and configuring SaltStack properly ...')
-        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest xenial main')
-        yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest/SALTSTACK-GPG-KEY.pub | apt-key add -')
+        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main')
+        yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
         yield child_process.execAsync('apt-get update')
         yield child_process.execAsync('apt-get install -y salt-minion')
       }
@@ -515,6 +542,8 @@ function summarizeResults (version) {
         failure++
       }
     })
+
+    
 
     if (failure > 0) {
       console.log(`\n\n>> Completed with Failures -- Success: ${success}, Failure: ${failure}`)

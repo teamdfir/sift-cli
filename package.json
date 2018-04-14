@@ -1,6 +1,6 @@
 {
   "name": "sift-cli",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Manage your SIFT installation",
   "main": "sift-cli.js",
   "bin": {

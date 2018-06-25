@@ -39,6 +39,7 @@ Usage:
   sift [options] install [--pre-release] [--version=<version>] [--mode=<mode>] [--user=<user>]
   sift [options] update
   sift [options] upgrade [--pre-release]
+  sift [options] self-upgrade [--pre-release]
   sift [options] version
   sift [options] debug
   sift -h | --help | -v
@@ -538,19 +539,31 @@ function summarizeResults (version) {
 
     let success = 0
     let failure = 0
+    let failures = [];
 
     Object.keys(results['local']).forEach((key) => {
       if (results['local'][key]['result'] === true) {
         success++
       } else {
         failure++
+        failures.push(results['local'][key])
       }
     })
 
-    
-
     if (failure > 0) {
-      console.log(`\n\n>> Completed with Failures -- Success: ${success}, Failure: ${failure}`)
+      console.log(`\n\n>> Incomplete due to Failures -- Success: ${success}, Failure: ${failure}`)
+      console.log(`\n>>>> List of Failures (first 10 only)`)
+      console.log(`\n     NOTE: First failure is generally the root cause.`)
+      console.log(`\n     IMPORTANT: If opening a ticket, please include this information.\n`)
+      failures.sort((a, b) => {
+        return a['__run_num__'] - b['__run_num__']
+      }).slice(0, 10).forEach((key) => {
+        console.log(`      - ID: ${key['__id__']}`)
+        console.log(`        SLS: ${key['__sls__']}`)
+        console.log(`        Run#: ${key['__run_num__']}`)
+        console.log(`        Comment: ${key['comment']}`)
+      })
+
       return new Promise((resolve, reject) => { return resolve() })
     }
 
@@ -715,3 +728,4 @@ ${yaml.safeDump(config)}
     yield summarizeResults(release)
   }
 }).catch(error)
+

@@ -181,7 +181,7 @@ function saltCheckVersion (path, value) {
         return reject(err);
       }
 
-      if (value === contents) {
+      if (contents.indexOf(value) === 0) {
         return resolve(true);
       }
       
@@ -202,19 +202,19 @@ function setupSalt() {
       const saltVersionOk = yield saltCheckVersion(aptSourceList, aptDebString)
 
       if (aptExists === true && saltVersionOk === false) {
-        console.log('NOTICE: Fixing incorrect Saltstack configuration.')
+        console.log('NOTICE: Fixing incorrect Saltstack version configuration.')
         console.log('Installing and configuring Saltstack properly ...')
-        yield child_process.execAsync('apt-get remove -y salt-minion salt-common')
+        yield child_process.execAsync('apt-get remove -y --allow-change-held-packages salt-minion salt-common')
         yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main')
         yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
         yield child_process.execAsync('apt-get update')
-        yield child_process.execAsync('apt-get install -y salt-minion')
+        yield child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
       } else if (aptExists === false || saltExists === false) {
         console.log('Installing and configuring SaltStack properly ...')
         yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main')
         yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
         yield child_process.execAsync('apt-get update')
-        yield child_process.execAsync('apt-get install -y salt-minion')
+        yield child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
       }
     })
   } else {

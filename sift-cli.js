@@ -196,7 +196,7 @@ function setupSalt() {
   if (cli['--dev'] === false) {
     return co.execute(function * () {
       const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
-      const aptDebString = 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main'
+      const aptDebString = 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/archive/2017.7.5 xenial main'
   
       const aptExists = yield fileExists(aptSourceList)
       const saltExists = yield fileExists('/usr/bin/salt-call')

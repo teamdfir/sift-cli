@@ -196,7 +196,7 @@ function setupSalt() {
   if (cli['--dev'] === false) {
     return co.execute(function * () {
       const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
-      const aptDebString = 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main'
+      const aptDebString = 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/archive/2017.7.5 xenial main'
   
       const aptExists = yield fileExists(aptSourceList)
       const saltExists = yield fileExists('/usr/bin/salt-call')
@@ -206,13 +206,13 @@ function setupSalt() {
         console.log('NOTICE: Fixing incorrect Saltstack version configuration.')
         console.log('Installing and configuring Saltstack properly ...')
         yield child_process.execAsync('apt-get remove -y --allow-change-held-packages salt-minion salt-common')
-        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main')
+        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/archive/2017.7.5 xenial main')
         yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
         yield child_process.execAsync('apt-get update')
         yield child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
       } else if (aptExists === false || saltExists === false) {
         console.log('Installing and configuring SaltStack properly ...')
-        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7 xenial main')
+        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/archive/2017.7.5 xenial main')
         yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
         yield child_process.execAsync('apt-get update')
         yield child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')

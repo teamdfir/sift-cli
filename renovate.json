@@ -1,5 +1,12 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    "config:js-app",
+    ":pinVersions",
+    ":automergePatch",
+    ":automergeMinor",
+    ":assignee(ekristen)",
+    ":reviewer(ekristen)",
+    ":label(kind/renovate)"
   ]
 }

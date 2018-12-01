@@ -16,7 +16,7 @@
   "author": "Erik Kristensen <erik@erikkristensen.com>",
   "license": "MIT",
   "dependencies": {
-    "bluebird": "3.5.0",
+    "bluebird": "3.5.3",
     "bluebird-co": "2.2.0",
     "docopt": "0.6.2",
     "github": "13.1.1",

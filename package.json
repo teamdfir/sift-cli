@@ -29,7 +29,7 @@
     "username": "2.3.0"
   },
   "devDependencies": {
-    "pkg": "4.0.0"
+    "pkg": "4.3.5"
   },
   "pkg": {
     "scripts": [

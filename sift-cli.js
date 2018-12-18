@@ -47,7 +47,7 @@ Usage:
 Options:
   --dev                 Developer Mode (do not use, dangerous, bypasses checks)
   --version=<version>   Specific version install [default: latest]
-  --mode=<mode>         SIFT Install Mode (complete or packages-only) [default: complete]
+  --mode=<mode>         SIFT Install Mode (complete, server or packages-only) [default: complete]
   --user=<user>         User used for SIFT config [default: ${currentUser}]
   --no-cache            Ignore the cache, always download the release files
 `
@@ -145,7 +145,7 @@ function setup () {
 
 function checkOptions () {
   return new Promise((resolve, reject) => {
-    const validModes = ['complete', 'packages-only']
+    const validModes = ['complete', 'server', 'packages-only']
     
     if (validModes.indexOf(cli['--mode']) === -1) {
       return reject(new Error(`${cli['--mode']} is not a valid install mode. Valid Modes: ${validModes.join(', ')}`))
@@ -456,6 +456,7 @@ function performUpdate(version) {
 
   const stateApplyMap = {
     'complete': 'sift.vm',
+    'server': 'sift.server',
     'packages-only': 'sift.pkgs'
   }
 

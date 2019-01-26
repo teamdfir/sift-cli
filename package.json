@@ -26,7 +26,7 @@
     "request": "2.88.0",
     "rollbar": "2.5.1",
     "split": "1.0.1",
-    "username": "2.3.0"
+    "username": "4.1.0"
   },
   "devDependencies": {
     "pkg": "4.3.7"

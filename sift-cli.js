@@ -1,19 +1,15 @@
-const pkg = require('./package.json')
 const cfg = require('./config.json')
-const Promise = require('bluebird')
+const bluebird = require('bluebird')
 const os = require('os')
-const fs = Promise.promisifyAll(require('fs'))
-const child_process = Promise.promisifyAll(require('child_process'))
-const path = require('path')
+const fs = bluebird.promisifyAll(require('fs'))
+const child_process = bluebird.promisifyAll(require('child_process'))
 const crypto = require('crypto')
 const spawn = require('child_process').spawn
-const co = require('bluebird-co')
 const docopt = require('docopt').docopt
 const GitHubApi = require('github')
-const mkdirp = Promise.promisify(require('mkdirp'))
+const mkdirp = bluebird.promisify(require('mkdirp'))
 const request = require('request')
 const openpgp = require('openpgp')
-const Rollbar = require('rollbar')
 const username = require('username')
 const readline = require('readline')
 const split = require('split')
@@ -52,6 +48,7 @@ Options:
   --no-cache            Ignore the cache, always download the release files
 `
 
+const saltstackVersion = '2018.3'
 const pubKey = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Comment: GPGTools - http://gpgtools.org
@@ -96,6 +93,7 @@ xUlS5QCeIuCyDm3icTtEq3/j6MpEjUkrMJk=
 -----END PGP PUBLIC KEY BLOCK-----
 `
 
+let osVersion = null
 let cachePath = '/var/cache/sift/cli'
 let versionFile = '/etc/sift-version'
 let configFile = '/etc/sift-config'
@@ -109,41 +107,52 @@ const github = new GitHubApi({
   Promise: Promise
 })
 
-const rollbar = new Rollbar({
-  accessToken: cfg.rollbar,
-  codeVersion: cfg.commit,
-  branch: cfg.branch,
-  environment: cfg.environment || 'development',
-  host: crypto.createHash('sha256').update(os.hostname()).digest('hex').substr(0, 35),
-  handleUncaughtExceptions: true,
-  handleUnhandledRejections: true,
-})
-
 const user = { id: crypto.createHash('sha256').update(currentUser).digest('hex').substr(0, 35) }
 
 function error (err) {
   console.log('')
   console.log(err.message)
   console.log(err.stack)
+  process.exit(1)
+}
 
-  rollbar.wait(function() {
-    process.exit(1)
+const setup = async () => {
+  if (cli['--dev'] === true) {
+    cachePath = '/tmp/var/cache/sift'
+    versionFile = '/tmp/sift-version'
+    configFile = '/tmp/sift-config'
+  }
+
+  await mkdirp(cachePath)
+}
+
+const validOS = () => {
+  return new Promise((resolve, reject) => {
+    fs.readFile('/etc/os-release', 'utf8', (err, contents) => {
+      if (err && err.code === 'ENOENT') {
+        return resolve(false);
+      }
+
+      if (err) {
+        return reject(err);
+      }
+
+      if (contents.indexOf('xenial') !== -1) {
+        osVersion = '16.04'
+        return resolve(true);
+      }
+
+      if (contents.indexOf('bionic') !== -1) {
+        osVersion = '18.04'
+        return resolve(true);
+      }
+      
+      return resolve(false);
+    })
   })
 }
 
-function setup () {
-  return co.execute(function * () {
-    if (cli['--dev'] === true) {
-      cachePath = '/tmp/var/cache/sift'
-      versionFile = '/tmp/sift-version'
-      configFile = '/tmp/sift-config'
-    }
-
-    yield mkdirp(cachePath)
-  })
-}
-
-function checkOptions () {
+const checkOptions = () => {
   return new Promise((resolve, reject) => {
     const validModes = ['complete', 'packages-only']
     
@@ -155,9 +164,9 @@ function checkOptions () {
   })
 }
 
-function fileExists (path) {
+const fileExists = (path) => {
   return new Promise((resolve, reject) => {
-    fs.stat(path, function (err, stats) {
+    fs.stat(path, (err, stats) => {
       if (err && err.code === 'ENOENT') {
         return resolve(false)
       }
@@ -171,7 +180,7 @@ function fileExists (path) {
   })
 }
 
-function saltCheckVersion (path, value) {
+const saltCheckVersion = (path, value) => {
   return new Promise((resolve, reject) => {
     fs.readFile(path, 'utf8', (err, contents) => {
       if (err && err.code === 'ENOENT') {
@@ -191,33 +200,30 @@ function saltCheckVersion (path, value) {
   })
 }
 
-
-function setupSalt() {
+const setupSalt = async () => {
   if (cli['--dev'] === false) {
-    return co.execute(function * () {
-      const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
-      const aptDebString = 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/archive/2017.7.5 xenial main'
-  
-      const aptExists = yield fileExists(aptSourceList)
-      const saltExists = yield fileExists('/usr/bin/salt-call')
-      const saltVersionOk = yield saltCheckVersion(aptSourceList, aptDebString)
+    const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
+    const aptDebString = `deb http://repo.saltstack.com/apt/ubuntu/${osVersion}/amd64/${saltstackVersion} xenial main`
 
-      if (aptExists === true && saltVersionOk === false) {
-        console.log('NOTICE: Fixing incorrect Saltstack version configuration.')
-        console.log('Installing and configuring Saltstack properly ...')
-        yield child_process.execAsync('apt-get remove -y --allow-change-held-packages salt-minion salt-common')
-        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/archive/2017.7.5 xenial main')
-        yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
-        yield child_process.execAsync('apt-get update')
-        yield child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
-      } else if (aptExists === false || saltExists === false) {
-        console.log('Installing and configuring SaltStack properly ...')
-        yield fs.writeFileAsync(aptSourceList, 'deb http://repo.saltstack.com/apt/ubuntu/16.04/amd64/archive/2017.7.5 xenial main')
-        yield child_process.execAsync('wget -O - https://repo.saltstack.com/apt/ubuntu/16.04/amd64/2017.7/SALTSTACK-GPG-KEY.pub | apt-key add -')
-        yield child_process.execAsync('apt-get update')
-        yield child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
-      }
-    })
+    const aptExists = await fileExists(aptSourceList)
+    const saltExists = await fileExists('/usr/bin/salt-call')
+    const saltVersionOk = await saltCheckVersion(aptSourceList, aptDebString)
+
+    if (aptExists === true && saltVersionOk === false) {
+      console.log('NOTICE: Fixing incorrect Saltstack version configuration.')
+      console.log('Installing and configuring Saltstack properly ...')
+      await child_process.execAsync('apt-get remove -y --allow-change-held-packages salt-minion salt-common')
+      await fs.writeFileAsync(aptSourceList, `deb http://repo.saltstack.com/apt/ubuntu/${osVersion}/amd64/${saltstackVersion} xenial main`)
+      await child_process.execAsync(`wget -O - https://repo.saltstack.com/apt/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
+      await child_process.execAsync('apt-get update')
+      await child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
+    } else if (aptExists === false || saltExists === false) {
+      console.log('Installing and configuring SaltStack properly ...')
+      await fs.writeFileAsync(aptSourceList, `deb http://repo.saltstack.com/apt/ubuntu/${osVersion}/amd64/${saltstackVersion} xenial main`)
+      await child_process.execAsync(`wget -O - https://repo.saltstack.com/apt/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
+      await child_process.execAsync('apt-get update')
+      await child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
+    }
   } else {
     return new Promise((resolve, reject) => {
       resolve()
@@ -225,7 +231,7 @@ function setupSalt() {
   }
 }
 
-function getCurrentVersion () {
+const getCurrentVersion = () => {
   return fs.readFileAsync(versionFile)
             .catch((err) => {
               if (err.code === 'ENOENT') return 'notinstalled'
@@ -234,47 +240,45 @@ function getCurrentVersion () {
             .then(contents => contents.toString().replace(/\n/g, ''))
 }
 
-function getReleases () {
+const getReleases = () => {
   return github.repos.getReleases({
-    owner: 'sans-dfir',
+    owner: 'teamdfir',
     repo: 'sift-saltstack'
   })
 }
 
-function getValidReleases () {
-  return co.execute(function * () {
-    const currentRelease = yield getCurrentVersion()
-    let releases = yield getReleases()
-    const realReleases = releases.data.filter(release => !Boolean(release.prerelease)).map(release => release.tag_name)
-    const allReleases = releases.data.map(release => release.tag_name)
+const getValidReleases = async () => {
+  const currentRelease = await getCurrentVersion()
+  let releases = await getReleases()
+  const realReleases = releases.data.filter(release => !Boolean(release.prerelease)).map(release => release.tag_name)
+  const allReleases = releases.data.map(release => release.tag_name)
 
-    if (currentRelease === 'notinstalled') {
-      if (cli['--pre-release'] === true) {
-        return allReleases
-      }
-      return realReleases
-    }
-
-    let curIndex = allReleases.indexOf(currentRelease)
-    if (curIndex === 0) {
-      return [allReleases[0]]
-    }
-
+  if (currentRelease === 'notinstalled') {
     if (cli['--pre-release'] === true) {
-      return allReleases.slice(0, curIndex)
+      return allReleases
     }
+    return realReleases
+  }
 
-    return allReleases.slice(0, curIndex).filter((release) => {
-      return realReleases.indexOf(release) !== -1
-    })
+  let curIndex = allReleases.indexOf(currentRelease)
+  if (curIndex === 0) {
+    return [allReleases[0]]
+  }
+
+  if (cli['--pre-release'] === true) {
+    return allReleases.slice(0, curIndex)
+  }
+
+  return allReleases.slice(0, curIndex).filter((release) => {
+    return realReleases.indexOf(release) !== -1
   })
 }
 
-function getLatestRelease () {
+const getLatestRelease = () => {
   return getValidReleases().then(releases => releases[0])
 }
 
-function isValidRelease (version) {
+const isValidRelease = (version) => {
   return getValidReleases().then((releases) => {
     return new Promise((resolve, reject) => {
       if (releases.indexOf(version) === -1) {
@@ -285,29 +289,28 @@ function isValidRelease (version) {
   })
 }
 
-function validateVersion (version) {
+const validateVersion = (version) => {
   return getValidReleases().then((releases) => {
     if (typeof releases.indexOf(version) === -1) {
       throw new Error('The version you are wanting to install/upgrade to is not valid')
     }
-    return new Promise((resolve, reject) => { resolve() })
+    return new Promise((resolve) => { resolve() })
   })
 }
 
-function downloadReleaseFile (version, filename) {
+const downloadReleaseFile = (version, filename) => {
   console.log(`>> downloading ${filename}`)
   
   const filepath = `${cachePath}/${version}/${filename}`
   
   if (fs.existsSync(filepath) && cli['--no-cache'] === false) {
-    return new Promise((resolve, reject) => { resolve() })
+    return new Promise((resolve) => { resolve() })
   }
   
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(filepath)
-    const req = request.get(`https://github.com/sans-dfir/sift-saltstack/releases/download/${version}/${filename}`)
+    const req = request.get(`https://github.com/teamdfir/sift-saltstack/releases/download/${version}/${filename}`)
     req.on('error', (err) => {
-      rollbar.error(err, {version, filename}, { user, route: { path: 'downloadReleaseFile' }})
       reject(err)
     })
     req
@@ -318,14 +321,13 @@ function downloadReleaseFile (version, filename) {
       })
       .pipe(output)
       .on('error', (err) => {
-        rollbar.error(err, {version, filename}, { user, route: { path: 'downloadReleaseFile' }})
         reject(err)
       })
       .on('close', resolve)
   })
 }
 
-function downloadRelease (version) {
+const downloadRelease = (version) => {
   console.log(`>> downloading sift-saltstack-${version}.tar.gz`)
   
   const filepath = `${cachePath}/${version}/sift-saltstack-${version}.tar.gz`
@@ -336,71 +338,68 @@ function downloadRelease (version) {
   
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(filepath)
-    const req = request.get(`https://github.com/sans-dfir/sift-saltstack/archive/${version}.tar.gz`)
+    const req = request.get(`https://github.com/teamdfir/sift-saltstack/archive/${version}.tar.gz`)
     req.on('error', (err) => {
-      rollbar.error(err, { user, route: { path: 'downloadRelease' }})
       reject(err)
     })
     req
       .pipe(output)
       .on('error', (err) => {
-        rollbar.error(err, {version, filename}, { user, route: { path: 'downloadRelease' }})
         reject(err)
       })
       .on('close', resolve)
   })
 }
 
-function validateFile (version, filename) {
+const validateFile = async (version, filename) => {
   console.log(`> validating file ${filename}`)
-  return co.execute(function * () {
-    const expected = yield fs.readFileAsync(`${cachePath}/${version}/${filename}.sha256`)
+  const expected = await fs.readFileAsync(`${cachePath}/${version}/${filename}.sha256`)
 
-    const actual = yield new Promise((resolve, reject) => {
-      const shasum = crypto.createHash('sha256')
-      fs.createReadStream(`${cachePath}/${version}/${filename}`)
-        .on('error', (err) => {
-          rollbar.error(err, {version, filename}, { user, route: { path: 'validateFile' }})
-          reject(err)
-        })
-        .on('data', (data) => {
-          shasum.update(data)
-        })
-        .on('close', () => {
-          resolve(`${shasum.digest('hex')}  /tmp/${filename}\n`)
-        })
-    })
-
-    if (expected.toString() !== actual) {
-      throw new Error(`Hashes for ${filename} do not match. Expected: ${expected}, Actual: ${actual}`)
-    }
+  const actual = await new Promise((resolve, reject) => {
+    const shasum = crypto.createHash('sha256')
+    fs.createReadStream(`${cachePath}/${version}/${filename}`)
+      .on('error', (err) => {
+        reject(err)
+      })
+      .on('data', (data) => {
+        shasum.update(data)
+      })
+      .on('close', () => {
+        resolve(`${shasum.digest('hex')}  /tmp/${filename}\n`)
+      })
   })
+
+  if (expected.toString() !== actual) {
+    throw new Error(`Hashes for ${filename} do not match. Expected: ${expected}, Actual: ${actual}`)
+  }
 }
 
-function validateSignature (version, filename) {
+const validateSignature = async (version, filename) => {
   console.log(`> validating signature for ${filename}`)
-  return co.execute(function * () {
 
-    const filepath = `${cachePath}/${version}/${filename}`
+  const filepath = `${cachePath}/${version}/${filename}`
 
-    const ctMessage = yield fs.readFileAsync(`${filepath}`, 'utf8')
-    const ctSignature = yield fs.readFileAsync(`${filepath}.asc`, 'utf8')
-    const ctPubKey = pubKey
+  const ctMessage = await fs.readFileAsync(`${filepath}`, 'utf8')
+  const ctSignature = await fs.readFileAsync(`${filepath}.asc`, 'utf8')
+  const ctPubKey = pubKey
 
-    const sig = openpgp.cleartext.readArmored(ctSignature)
-    const valid = yield sig.verify(openpgp.key.readArmored(ctPubKey).keys)
+  const options = {
+    message: await openpgp.cleartext.readArmored(ctSignature),
+    publicKeys: (await openpgp.key.readArmored(ctPubKey)).keys
+  }
 
-    if (typeof valid[0] === 'undefined') {
-      throw new Error('Invalid Signature')
-    }
+  const valid = await openpgp.verify(options)
 
-    if (valid[0].valid === false) {
-      throw new Error('PGP Signature is not valid')
-    }
-  })
+  if (typeof valid.signatures === 'undefined' && typeof valid.signatures[0] === 'undefined') {
+    throw new Error('Invalid Signature')
+  }
+
+  if (valid.signatures[0].valid === false) {
+    throw new Error('PGP Signature is not valid')
+  }
 }
 
-function extractUpdate(version, filename) {
+const extractUpdate = (version, filename) => {
   const filepath = `${cachePath}/${version}/${filename}`
 
   return new Promise((resolve, reject) => {
@@ -418,12 +417,10 @@ function extractUpdate(version, filename) {
       console.log(data.toString())
     })
     extract.on('error', (err) => {
-      rollbar.error(err, {version, filename}, { user, route: { path: 'extractUpdate' }})
       reject(err)
     })
     extract.on('close', (code) => {
       if (code !== 0) {
-        rollbar.error(`extractUpdate exited with ${code}`, {stdout, stderr}, { user, route: { path: 'extractUpdate' }})
         return reject(new Error('Extraction returned exit code not zero'))
       }
     
@@ -432,21 +429,20 @@ function extractUpdate(version, filename) {
   })
 }
 
-function downloadUpdate(version) {
+const downloadUpdate = async (version) => {
   console.log(`> downloading ${version}`)
-  return co.execute(function * () {
-    yield mkdirp(`${cachePath}/${version}`)
-    yield downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.asc`)
-    yield downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.sha256`)
-    yield downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.sha256.asc`)
-    yield downloadRelease(version)
-    yield validateFile(version, `sift-saltstack-${version}.tar.gz`)
-    yield validateSignature(version, `sift-saltstack-${version}.tar.gz.sha256`)
-    yield extractUpdate(version, `sift-saltstack-${version}.tar.gz`)
-  })
+  
+  await mkdirp(`${cachePath}/${version}`)
+  await downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.asc`)
+  await downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.sha256`)
+  await downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.sha256.asc`)
+  await downloadRelease(version)
+  await validateFile(version, `sift-saltstack-${version}.tar.gz`)
+  await validateSignature(version, `sift-saltstack-${version}.tar.gz.sha256`)
+  await extractUpdate(version, `sift-saltstack-${version}.tar.gz`)
 }
 
-function performUpdate(version) {
+const performUpdate = (version) => {
   const filepath = `${cachePath}/${version}/sift-saltstack-${version.replace('v', '')}`
   const outputFilepath = `${cachePath}/${version}/results.yml`
   const logFilepath = `${cachePath}/${version}/saltstack.log`
@@ -511,12 +507,11 @@ function performUpdate(version) {
 
     update.on('error', (err) => {
       console.log(arguments)
-      rollbar.error(err, {version}, { user, route: { path: 'performUpdate' }})
+
       reject(err)
     })
     update.on('close', (code) => {
       if (code !== 0) {
-        rollbar.error(`performUpdate exited with ${code}`, {stdout, stderr}, { user, route: { path: 'performUpdate' }})
         return reject(new Error('Update returned exit code not zero'))
       }
 
@@ -525,53 +520,51 @@ function performUpdate(version) {
   })
 }
 
-function summarizeResults (version) {
-  return co.execute(function * () {
-    const outputFilepath = `${cachePath}/${version}/results.yml`
-    const rawContents = yield fs.readFileAsync(outputFilepath)
-    let results = {}
+const summarizeResults = async (version) => {
+  const outputFilepath = `${cachePath}/${version}/results.yml`
+  const rawContents = await fs.readFileAsync(outputFilepath)
+  let results = {}
 
-    try {
-      results = yaml.safeLoad(rawContents, { schema: PYTHON_SCHEMA })
-    } catch (err) {
-      rollbar.error(err, {version}, { user, route: { path: 'summarizeResults' }})
+  try {
+    results = yaml.safeLoad(rawContents, { schema: PYTHON_SCHEMA })
+  } catch (err) {
+    // TODO handle?
+  }
+
+  let success = 0
+  let failure = 0
+  let failures = [];
+
+  Object.keys(results['local']).forEach((key) => {
+    if (results['local'][key]['result'] === true) {
+      success++
+    } else {
+      failure++
+      failures.push(results['local'][key])
     }
+  })
 
-    let success = 0
-    let failure = 0
-    let failures = [];
-
-    Object.keys(results['local']).forEach((key) => {
-      if (results['local'][key]['result'] === true) {
-        success++
-      } else {
-        failure++
-        failures.push(results['local'][key])
-      }
+  if (failure > 0) {
+    console.log(`\n\n>> Incomplete due to Failures -- Success: ${success}, Failure: ${failure}`)
+    console.log(`\n>>>> List of Failures (first 10 only)`)
+    console.log(`\n     NOTE: First failure is generally the root cause.`)
+    console.log(`\n     IMPORTANT: If opening a ticket, please include this information.\n`)
+    failures.sort((a, b) => {
+      return a['__run_num__'] - b['__run_num__']
+    }).slice(0, 10).forEach((key) => {
+      console.log(`      - ID: ${key['__id__']}`)
+      console.log(`        SLS: ${key['__sls__']}`)
+      console.log(`        Run#: ${key['__run_num__']}`)
+      console.log(`        Comment: ${key['comment']}`)
     })
 
-    if (failure > 0) {
-      console.log(`\n\n>> Incomplete due to Failures -- Success: ${success}, Failure: ${failure}`)
-      console.log(`\n>>>> List of Failures (first 10 only)`)
-      console.log(`\n     NOTE: First failure is generally the root cause.`)
-      console.log(`\n     IMPORTANT: If opening a ticket, please include this information.\n`)
-      failures.sort((a, b) => {
-        return a['__run_num__'] - b['__run_num__']
-      }).slice(0, 10).forEach((key) => {
-        console.log(`      - ID: ${key['__id__']}`)
-        console.log(`        SLS: ${key['__sls__']}`)
-        console.log(`        Run#: ${key['__run_num__']}`)
-        console.log(`        Comment: ${key['comment']}`)
-      })
+    return new Promise((resolve, reject) => { return resolve() })
+  }
 
-      return new Promise((resolve, reject) => { return resolve() })
-    }
-
-    console.log(`\n\n>> COMPLETED SUCCESSFULLY -- Success: ${success}, Failure: ${failure}`)
-  })
+  console.log(`\n\n>> COMPLETED SUCCESSFULLY -- Success: ${success}, Failure: ${failure}`)
 }
 
-function saveConfiguration (version) {
+const saveConfiguration = (version) => {
   const config = {
     version: version,
     mode: cli['--mode'],
@@ -581,7 +574,7 @@ function saveConfiguration (version) {
   return fs.writeFileAsync(configFile, yaml.safeDump(config))
 }
 
-function loadConfiguration () {
+const loadConfiguration = () => {
   return fs.readFileAsync(configFile)
             .then((contents) => {
               return yaml.safeLoad(contents)
@@ -598,20 +591,19 @@ function loadConfiguration () {
             })
 }
 
-co.execute(function * () {
+const main = async () => {
   if (cli['-v'] === true) {
-    console.log(`Version: ${pkg.version}, Build: ${cfg.branch}-${cfg.commit}`)
+    console.log(`Version: ${cfg.version}`)
     return process.exit(0)
   }
   
-  console.log(`> sift-cli@${pkg.version}-${cfg.branch}.${cfg.commit}`)
+  console.log(`> sift-cli@${cfg.version}`)
 
   if (cli['debug'] === true) {
-    const config = yield loadConfiguration()
+    const config = await loadConfiguration()
 
     const debug = `
-Version: ${pkg.version}
-Build: ${cfg.branch}-${cfg.commit}
+Version: ${cfg.version}
 User: ${currentUser}
 
 Config:
@@ -631,7 +623,7 @@ ${yaml.safeDump(config)}
     }
   }
 
-  yield checkOptions().catch((err) => {
+  await checkOptions().catch((err) => {
     if (err.message.indexOf('is not a valid install mode') === -1) {
       throw err
     }
@@ -640,11 +632,13 @@ ${yaml.safeDump(config)}
     return process.exit(2)
   })
 
-  yield setup()
+  await validOS()
 
-  siftConfiguration = yield loadConfiguration()
+  await setup()
 
-  const version = yield getCurrentVersion()
+  siftConfiguration = await loadConfiguration()
+
+  const version = await getCurrentVersion()
   console.log(`> sift-version: ${version}\n`)
 
   if (cli['version'] === true) {
@@ -652,8 +646,8 @@ ${yaml.safeDump(config)}
   }
 
   if (cli['list-upgrades'] === true) {
-    const releases = yield getValidReleases()
-    const current = yield getCurrentVersion()
+    const releases = await getValidReleases()
+    const current = await getCurrentVersion()
     if (releases.length === 0 || releases[0] === current) {
       console.log('No upgrades available')
       return process.exit(0)
@@ -669,20 +663,20 @@ ${yaml.safeDump(config)}
     return process.exit(1)
   }
 
-  yield setupSalt()
+  await setupSalt()
 
   if (cli['update'] === true) {
     if (version === 'notinstalled') {
       throw new Error('SIFT not installed, unable to update')
     }
 
-    yield downloadUpdate(version)
-    yield performUpdate(version)
-    yield summarizeResults(version)
+    await downloadUpdate(version)
+    await performUpdate(version)
+    await summarizeResults(version)
   }
 
   if (cli['install'] === true) {
-    const currentVersion = yield getCurrentVersion(versionFile)
+    const currentVersion = await getCurrentVersion(versionFile)
 
     if (currentVersion !== 'notinstalled') {
       console.log('SIFT already installed, please use the update or upgrade command')
@@ -691,9 +685,9 @@ ${yaml.safeDump(config)}
 
     let versionToInstall = null
     if (cli['--version'] === 'latest') {
-      versionToInstall = yield getLatestRelease()
+      versionToInstall = await getLatestRelease()
     } else {
-      const validRelease = yield isValidRelease(cli['--version'])
+      const validRelease = await isValidRelease(cli['--version'])
       
       if (validRelease === false) {
         console.log(`${cli['--version']} is not a valid release of the SIFT Workstation`)
@@ -707,25 +701,31 @@ ${yaml.safeDump(config)}
       throw new Error('versionToInstall was null, this should never happen, a bug was reported')
     }
 
-    yield validateVersion(versionToInstall)
-    yield downloadUpdate(versionToInstall)
-    yield performUpdate(versionToInstall)
-    yield summarizeResults(versionToInstall)
-    yield saveConfiguration(versionToInstall)
+    await validateVersion(versionToInstall)
+    await downloadUpdate(versionToInstall)
+    await performUpdate(versionToInstall)
+    await summarizeResults(versionToInstall)
+    await saveConfiguration(versionToInstall)
   }
 
   if (cli['upgrade'] === true) {
-    const release = yield getLatestRelease()
-    const current = yield getCurrentVersion()
+    const release = await getLatestRelease()
+    const current = await getCurrentVersion()
 
     if (release === current || typeof release === 'undefined') {
       console.log('No upgrades available')
       process.exit(0)
     }
 
-    yield downloadUpdate(release)
-    yield performUpdate(release)
-    yield summarizeResults(release)
+    await downloadUpdate(release)
+    await performUpdate(release)
+    await summarizeResults(release)
   }
-}).catch(error)
+}
 
+
+try {
+  main()
+} catch (err) {
+  error(err)
+}

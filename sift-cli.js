@@ -20,7 +20,7 @@ const split = require('split')
 const yaml = require('js-yaml')
 const PythonUnicodeType = new yaml.Type('tag:yaml.org,2002:python/unicode', {
   kind: 'scalar',
-  construct: function (data) { return data !== null ? data : ''; }
+  construct: (data) => { return data !== null ? data : ''; }
 })
 const PYTHON_SCHEMA = new yaml.Schema({
   include: [ yaml.DEFAULT_SAFE_SCHEMA ],
@@ -93,6 +93,20 @@ xUlS5QCeIuCyDm3icTtEq3/j6MpEjUkrMJk=
 -----END PGP PUBLIC KEY BLOCK-----
 `
 
+const help = `
+
+----- PLEASE READ ----------------------
+
+A lot of failures are caused by the apt system being locked
+or unhealthy. 
+
+Before opening an issue in GitHub, please check to see if 
+your apt system is healthy.
+
+Try running 'apt-get update' then remove any packages that 
+aren't used by running 'apt-get autoremove'
+`
+
 let osVersion = null
 let osCodename = null
 let cachePath = '/var/cache/sift/cli'
@@ -108,12 +122,11 @@ const github = new GitHubApi({
   Promise: Promise
 })
 
-const user = { id: crypto.createHash('sha256').update(currentUser).digest('hex').substr(0, 35) }
-
-function error (err) {
+const error = (err) => {
   console.log('')
   console.log(err.message)
   console.log(err.stack)
+  console.log(help)
   process.exit(1)
 }
 

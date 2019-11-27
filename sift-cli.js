@@ -43,7 +43,7 @@ Usage:
 Options:
   --dev                 Developer Mode (do not use, dangerous, bypasses checks)
   --version=<version>   Specific version install [default: latest]
-  --mode=<mode>         SIFT Install Mode (complete or packages-only) [default: complete]
+  --mode=<mode>         SIFT Install Mode (desktop, server, complete (legacy) or packages-only (legacy)) [default: desktop]
   --user=<user>         User used for SIFT config [default: ${currentUser}]
   --no-cache            Ignore the cache, always download the release files
   --verbose             Display verbose logging
@@ -171,7 +171,7 @@ const validOS = () => {
 
 const checkOptions = () => {
   return new Promise((resolve, reject) => {
-    const validModes = ['complete', 'packages-only']
+    const validModes = ['desktop', 'server', 'complete', 'packages-only']
     
     if (validModes.indexOf(cli['--mode']) === -1) {
       return reject(new Error(`${cli['--mode']} is not a valid install mode. Valid Modes: ${validModes.join(', ')}`))
@@ -468,6 +468,8 @@ const performUpdate = (version) => {
   const endRegex = /Completed state \[(.*)\] at time (.*) duration_in_ms=(.*)/g
 
   const stateApplyMap = {
+    'desktop': 'sift.desktop',
+    'server': 'sift.server',
     'complete': 'sift.vm',
     'packages-only': 'sift.pkgs'
   }
@@ -496,7 +498,7 @@ const performUpdate = (version) => {
       `pillar={sift_user: "${siftConfiguration['user']}"}`
     ]
 
-    const update = spawn('salt-call', updateArgs)
+    const update = spawn(' ', updateArgs)
     update.stdout.pipe(fs.createWriteStream(outputFilepath))
     update.stdout.pipe(logFile)
 

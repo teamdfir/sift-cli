@@ -46,6 +46,7 @@ Options:
   --mode=<mode>         SIFT Install Mode (complete or packages-only) [default: complete]
   --user=<user>         User used for SIFT config [default: ${currentUser}]
   --no-cache            Ignore the cache, always download the release files
+  --verbose             Display verbose logging
 `
 
 const saltstackVersion = '2018.3'

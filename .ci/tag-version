@@ -1,0 +1,49 @@
+#!/bin/bash
+
+TAG=${1}
+VALID_TAG=false
+
+if [ "x${TAG}" == "x" ]; then
+  echo "You must specify a tag"
+  exit 10
+fi
+
+if [ ! -f "package.json" ]; then
+  echo "This script should be run from the root of the directory"
+  exit 11
+fi
+
+BRANCH=$(git symbolic-ref HEAD 2> /dev/null)
+BRANCH=${BRANCH##refs/heads/}
+
+if [ "${BRANCH}" != "master" ]; then
+  echo "You must only be on the master branch"
+  exit 12
+fi
+
+if [ $(echo ${TAG} | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$") ]; then
+  VALID_TAG=true
+fi
+
+if [ $(echo ${TAG} | grep -E "^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$") ]; then
+  VALID_TAG=true
+fi
+
+if [ $(echo ${TAG} | grep -E "^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$") ]; then
+  VALID_TAG=true
+fi
+
+if [ "${VALID_TAG}" == "false" ]; then
+  echo "The tag specified was invalid."
+  exit 10
+fi
+
+VTAG="v${TAG}"
+MSG="version ${TAG}"
+
+npm --no-git-tag-version version $TAG
+
+git commit -a -m "${MSG}"
+git tag -m "${MSG}" ${VTAG}
+git push origin master
+git push origin --tags

@@ -120,7 +120,6 @@ const cli = docopt(doc)
 const github = new GitHubApi({
   version: '3.0.0',
   validateCache: true,
-  Promise: Promise
 })
 
 const error = (err) => {
@@ -498,7 +497,8 @@ const performUpdate = (version) => {
       `pillar={sift_user: "${siftConfiguration['user']}"}`
     ]
 
-    const update = spawn(' ', updateArgs)
+    const update = spawn('salt-call', updateArgs)
+  
     update.stdout.pipe(fs.createWriteStream(outputFilepath))
     update.stdout.pipe(logFile)
 

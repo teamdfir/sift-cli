@@ -10,7 +10,7 @@
     "pkg:prep": "jo version=$(bash .ci/version) > config.json",
     "pkg:build": "pkg -t node12-linux --out-dir release package.json && cd release && mv sift-cli sift-cli-linux",
     "pkg:hash": "cd release && shasum -a 256 sift-cli-linux > sift-cli-linux.sha256",
-    "pkg:sign": "cd release && gpg --armor --clearsign --digest-algo SHA256 -u 22598A94 sift-cli-linux.sha256 && rm sift-cli-linux.sha256",
+    "pkg:sign": "cd release && rm -f sift-cli-linux.sha256.asc && gpg --armor --clearsign --digest-algo SHA256 -u 22598A94 sift-cli-linux.sha256 && rm sift-cli-linux.sha256",
     "pkg": "npm run pkg:prep && npm run pkg:build && npm run pkg:hash && npm run pkg:sign"
   },
   "author": "Erik Kristensen <erik@erikkristensen.com>",

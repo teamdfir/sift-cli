@@ -12,15 +12,18 @@ Usage:
   sift [options] install [--pre-release] [--version=<version>] [--mode=<mode>] [--user=<user>]
   sift [options] update
   sift [options] upgrade [--pre-release]
+  sift [options] self-upgrade [--pre-release]
   sift [options] version
+  sift [options] debug
   sift -h | --help | -v
 
 Options:
   --dev                 Developer Mode (do not use, dangerous, bypasses checks)
   --version=<version>   Specific version install [default: latest]
-  --mode=<mode>         SIFT Install Mode (complete or packages-only) [default: complete]
+  --mode=<mode>         SIFT Install Mode (desktop, server, complete (legacy) or packages-only (legacy)) [default: desktop]
   --user=<user>         User used for SIFT config [default: ${currentUser}]
   --no-cache            Ignore the cache, always download the release files
+  --verbose             Display verbose logging
 ```
 
 ## Issues
@@ -50,16 +53,18 @@ Open issues over at the main [SIFT Repository](https://github.com/sans-dfir/sift
 sift install
 ```
 
-### Install Latest SIFT (packages only)
+### Install Latest SIFT in Server Mode
+
+**Note:** Server mode only installs tools and packages, it does not do any modifications that would normally appear on the desktop.
 
 ```bash
-sift install --mode=packages-only
+sift install --mode=server
 ```
 
 ### Install Specific Version
 
 ```bash
-sift install v2017.22.2
+sift install v2019.11.0
 ```
 
 ### Update Existing VM

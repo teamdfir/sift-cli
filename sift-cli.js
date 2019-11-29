@@ -13,6 +13,7 @@ const openpgp = require('openpgp')
 const username = require('username')
 const readline = require('readline')
 const split = require('split')
+const semver = require('semver')
 
 /**
  * Setup Custom YAML Parsing
@@ -659,6 +660,14 @@ ${yaml.safeDump(config)}
 
   const version = await getCurrentVersion()
   console.log(`> sift-version: ${version}\n`)
+
+  if (semver.lt(semver.coerce(version, {loose: true}), '2019.11.0') === true) {
+    if (cli['--mode'] === 'desktop') {
+      cli['--mode'] = 'vm'
+    } else if (cli['--mode'] === 'server') {
+      cli['--mode'] = 'pkgs'
+    }
+  }
 
   if (cli['version'] === true) {
     return process.exit(0)

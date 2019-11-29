@@ -23,7 +23,7 @@
     "mkdirp": "0.5.1",
     "openpgp": "4.7.0",
     "request": "2.88.0",
-    "semver": "^6.3.0",
+    "semver": "6.3.0",
     "split": "1.0.1",
     "username": "5.1.0"
   },

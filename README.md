@@ -10,8 +10,8 @@ Manage your SIFT Installation
 Usage:
   sift [options] list-upgrades [--pre-release]
   sift [options] install [--pre-release] [--version=<version>] [--mode=<mode>] [--user=<user>]
-  sift [options] update
-  sift [options] upgrade [--pre-release]
+  sift [options] update [--mode=<mode>]
+  sift [options] upgrade [--pre-release] [--mode=<mode>]
   sift [options] self-upgrade [--pre-release]
   sift [options] version
   sift [options] debug

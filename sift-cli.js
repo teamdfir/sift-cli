@@ -24,8 +24,8 @@ const PythonUnicodeType = new yaml.Type('tag:yaml.org,2002:python/unicode', {
   construct: (data) => { return data !== null ? data : ''; }
 })
 const PYTHON_SCHEMA = new yaml.Schema({
-  include: [ yaml.DEFAULT_SAFE_SCHEMA ],
-  explicit: [ PythonUnicodeType ]
+  include: [yaml.DEFAULT_SAFE_SCHEMA],
+  explicit: [PythonUnicodeType]
 })
 
 const currentUser = process.env.SUDO_USER || username.sync()
@@ -151,7 +151,7 @@ const validOS = () => {
       if (err) {
         return reject(err);
       }
-    
+
       if (contents.indexOf('UBUNTU_CODENAME=xenial') !== -1) {
         osVersion = '16.04'
         osCodename = 'xenial'
@@ -163,7 +163,7 @@ const validOS = () => {
         osCodename = 'bionic'
         return resolve(true);
       }
-      
+
       return resolve(false);
     })
   })
@@ -172,7 +172,7 @@ const validOS = () => {
 const checkOptions = () => {
   return new Promise((resolve, reject) => {
     const validModes = ['desktop', 'server', 'complete', 'packages-only']
-    
+
     if (validModes.indexOf(cli['--mode']) === -1) {
       return reject(new Error(`${cli['--mode']} is not a valid install mode. Valid Modes: ${validModes.join(', ')}`))
     }
@@ -187,11 +187,11 @@ const fileExists = (path) => {
       if (err && err.code === 'ENOENT') {
         return resolve(false)
       }
-      
+
       if (err) {
         return reject(err)
       }
-      
+
       return resolve(true)
     })
   })
@@ -211,7 +211,7 @@ const saltCheckVersion = (path, value) => {
       if (contents.indexOf(value) === 0) {
         return resolve(true);
       }
-      
+
       return resolve(false);
     })
   })
@@ -250,11 +250,11 @@ const setupSalt = async () => {
 
 const getCurrentVersion = () => {
   return fs.readFileAsync(versionFile)
-            .catch((err) => {
-              if (err.code === 'ENOENT') return 'notinstalled'
-              if (err) throw err
-            })
-            .then(contents => contents.toString().replace(/\n/g, ''))
+    .catch((err) => {
+      if (err.code === 'ENOENT') return 'notinstalled'
+      if (err) throw err
+    })
+    .then(contents => contents.toString().replace(/\n/g, ''))
 }
 
 const getReleases = () => {
@@ -317,13 +317,13 @@ const validateVersion = (version) => {
 
 const downloadReleaseFile = (version, filename) => {
   console.log(`>> downloading ${filename}`)
-  
+
   const filepath = `${cachePath}/${version}/${filename}`
-  
+
   if (fs.existsSync(filepath) && cli['--no-cache'] === false) {
     return new Promise((resolve) => { resolve() })
   }
-  
+
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(filepath)
     const req = request.get(`https://github.com/teamdfir/sift-saltstack/releases/download/${version}/${filename}`)
@@ -332,7 +332,7 @@ const downloadReleaseFile = (version, filename) => {
     })
     req
       .on('response', (res) => {
-        if (res.statusCode !== 200)  {
+        if (res.statusCode !== 200) {
           throw new Error(res.body)
         }
       })
@@ -346,13 +346,13 @@ const downloadReleaseFile = (version, filename) => {
 
 const downloadRelease = (version) => {
   console.log(`>> downloading sift-saltstack-${version}.tar.gz`)
-  
+
   const filepath = `${cachePath}/${version}/sift-saltstack-${version}.tar.gz`
-  
+
   if (fs.existsSync(filepath) && cli['--no-cache'] === false) {
     return new Promise((resolve, reject) => { resolve() })
   }
-  
+
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(filepath)
     const req = request.get(`https://github.com/teamdfir/sift-saltstack/archive/${version}.tar.gz`)
@@ -440,7 +440,7 @@ const extractUpdate = (version, filename) => {
       if (code !== 0) {
         return reject(new Error('Extraction returned exit code not zero'))
       }
-    
+
       resolve()
     })
   })
@@ -448,7 +448,7 @@ const extractUpdate = (version, filename) => {
 
 const downloadUpdate = async (version) => {
   console.log(`> downloading ${version}`)
-  
+
   await mkdirp(`${cachePath}/${version}`)
   await downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.asc`)
   await downloadReleaseFile(version, `sift-saltstack-${version}.tar.gz.sha256`)
@@ -478,7 +478,7 @@ const performUpdate = (version) => {
     console.log(`> performing update ${version}`)
 
     console.log(`>> Log file: ${logFilepath}`)
-    
+
     if (os.platform() !== 'linux') {
       console.log(`>>> Platform is not linux`)
       return process.exit(0)
@@ -486,7 +486,7 @@ const performUpdate = (version) => {
 
     let stdout = ''
     let stderr = ''
-    
+
     const logFile = fs.createWriteStream(logFilepath)
 
     const updateArgs = [
@@ -499,7 +499,7 @@ const performUpdate = (version) => {
     ]
 
     const update = spawn('salt-call', updateArgs)
-  
+
     update.stdout.pipe(fs.createWriteStream(outputFilepath))
     update.stdout.pipe(logFile)
 
@@ -596,19 +596,19 @@ const saveConfiguration = (version) => {
 
 const loadConfiguration = () => {
   return fs.readFileAsync(configFile)
-            .then((contents) => {
-              return yaml.safeLoad(contents)
-            })
-            .catch((err) => {
-              if (err.code === 'ENOENT') {
-                return {
-                  mode: cli['--mode'],
-                  user: cli['--user']
-                }
-              }
-              
-              throw err
-            })
+    .then((contents) => {
+      return yaml.safeLoad(contents)
+    })
+    .catch((err) => {
+      if (err.code === 'ENOENT') {
+        return {
+          mode: cli['--mode'],
+          user: cli['--user']
+        }
+      }
+
+      throw err
+    })
 }
 
 const main = async () => {
@@ -616,7 +616,7 @@ const main = async () => {
     console.log(`Version: ${cfg.version}`)
     return process.exit(0)
   }
-  
+
   console.log(`> sift-cli@${cfg.version}`)
 
   if (cli['debug'] === true) {
@@ -647,7 +647,7 @@ ${yaml.safeDump(config)}
     if (err.message.indexOf('is not a valid install mode') === -1) {
       throw err
     }
-    
+
     console.log(`\n${err.message}`)
     return process.exit(2)
   })
@@ -661,11 +661,13 @@ ${yaml.safeDump(config)}
   const version = await getCurrentVersion()
   console.log(`> sift-version: ${version}\n`)
 
-  if (semver.lt(semver.coerce(version, {loose: true}), '2019.11.0') === true) {
-    if (cli['--mode'] === 'desktop') {
-      cli['--mode'] = 'vm'
-    } else if (cli['--mode'] === 'server') {
-      cli['--mode'] = 'pkgs'
+  if (version !== 'notinstalled') {
+    if (semver.lt(semver.coerce(version, { loose: true }), '2019.11.0') === true) {
+      if (cli['--mode'] === 'desktop') {
+        cli['--mode'] = 'vm'
+      } else if (cli['--mode'] === 'server') {
+        cli['--mode'] = 'pkgs'
+      }
     }
   }
 
@@ -685,7 +687,7 @@ ${yaml.safeDump(config)}
     releases.forEach(release => console.log(`  - ${release}`))
     return process.exit(0)
   }
-  
+
   if (!process.env.SUDO_USER && cli['--dev'] === false) {
     console.log('> Error! You must be root to execute this.')
     return process.exit(1)
@@ -716,12 +718,12 @@ ${yaml.safeDump(config)}
       versionToInstall = await getLatestRelease()
     } else {
       const validRelease = await isValidRelease(cli['--version'])
-      
+
       if (validRelease === false) {
         console.log(`${cli['--version']} is not a valid release of the SIFT Workstation`)
         return process.exit(5)
       }
-      
+
       versionToInstall = cli['--version']
     }
 

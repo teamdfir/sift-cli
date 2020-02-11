@@ -22,7 +22,7 @@
     "js-yaml": "3.13.1",
     "mkdirp": "0.5.1",
     "openpgp": "4.7.1",
-    "request": "2.88.0",
+    "request": "2.88.2",
     "semver": "6.3.0",
     "split": "1.0.1",
     "username": "5.1.0"

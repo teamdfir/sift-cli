@@ -611,7 +611,7 @@ const loadConfiguration = () => {
     })
 }
 
-const main = async () => {
+const run = async () => {
   if (cli['-v'] === true) {
     console.log(`Version: ${cfg.version}`)
     return process.exit(0)
@@ -753,9 +753,12 @@ ${yaml.safeDump(config)}
   }
 }
 
-
-try {
-  main()
-} catch (err) {
-  error(err)
+const main = async () => {
+  try {
+    await run()
+  } catch (err) {
+    error(err)
+  }
 }
+
+main()

@@ -170,15 +170,11 @@ const validOS = () => {
 }
 
 const checkOptions = () => {
-  return new Promise((resolve, reject) => {
-    const validModes = ['desktop', 'server', 'complete', 'packages-only']
+  const validModes = ['desktop', 'server', 'complete', 'packages-only']
 
-    if (validModes.indexOf(cli['--mode']) === -1) {
-      return reject(new Error(`${cli['--mode']} is not a valid install mode. Valid Modes: ${validModes.join(', ')}`))
-    }
-
-    resolve()
-  })
+  if (validModes.indexOf(cli['--mode']) === -1) {
+    throw new Error(`${cli['--mode']} is not a valid install mode. Valid Modes: ${validModes.join(', ')}`)
+  }
 }
 
 const fileExists = (path) => {
@@ -643,14 +639,7 @@ ${yaml.safeDump(config)}
     }
   }
 
-  await checkOptions().catch((err) => {
-    if (err.message.indexOf('is not a valid install mode') === -1) {
-      throw err
-    }
-
-    console.log(`\n${err.message}`)
-    return process.exit(2)
-  })
+  checkOptions()
 
   await validOS()
 

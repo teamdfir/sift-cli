@@ -50,7 +50,7 @@ Options:
   --verbose             Display verbose logging
 `
 
-const saltstackVersion = '2018.3'
+const saltstackVersion = '2019.2'
 const pubKey = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Comment: GPGTools - http://gpgtools.org
@@ -141,32 +141,30 @@ const setup = async () => {
   await mkdirp(cachePath)
 }
 
-const validOS = () => {
-  return new Promise((resolve, reject) => {
-    fs.readFile('/etc/os-release', 'utf8', (err, contents) => {
-      if (err && err.code === 'ENOENT') {
-        return resolve(false);
-      }
+const validOS = async () => {
+  try {
+    const contents = fs.readFileSync('/etc/os-release', 'utf8')
 
-      if (err) {
-        return reject(err);
-      }
+    if (contents.indexOf('UBUNTU_CODENAME=xenial') !== -1) {
+      osVersion = '16.04'
+      osCodename = 'xenial'
+      return true
+    }
 
-      if (contents.indexOf('UBUNTU_CODENAME=xenial') !== -1) {
-        osVersion = '16.04'
-        osCodename = 'xenial'
-        return resolve(true);
-      }
+    if (contents.indexOf('UBUNTU_CODENAME=bionic') !== -1) {
+      osVersion = '18.04'
+      osCodename = 'bionic'
+      return true
+    }
 
-      if (contents.indexOf('UBUNTU_CODENAME=bionic') !== -1) {
-        osVersion = '18.04'
-        osCodename = 'bionic'
-        return resolve(true);
-      }
+    throw new Error('invalid OS, unable to determine ubuntu version')
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      throw new Error('invalid OS, missing /etc/os-release')
+    }
 
-      return resolve(false);
-    })
-  })
+    throw err
+  }
 }
 
 const checkOptions = () => {

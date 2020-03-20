@@ -35,7 +35,7 @@ Usage:
   sift [options] list-upgrades [--pre-release]
   sift [options] install [--pre-release] [--version=<version>] [--mode=<mode>] [--user=<user>]
   sift [options] update
-  sift [options] upgrade [--pre-release]
+  sift [options] upgrade [--pre-release] [--mode=<mode>] [--user=<user>]
   sift [options] self-upgrade [--pre-release]
   sift [options] version
   sift [options] debug
@@ -588,21 +588,19 @@ const saveConfiguration = (version) => {
   return fs.writeFileAsync(configFile, yaml.safeDump(config))
 }
 
-const loadConfiguration = () => {
-  return fs.readFileAsync(configFile)
-    .then((contents) => {
-      return yaml.safeLoad(contents)
-    })
-    .catch((err) => {
-      if (err.code === 'ENOENT') {
-        return {
-          mode: cli['--mode'],
-          user: cli['--user']
-        }
+const loadConfiguration = async () => {
+  try {
+    return await fs.readFileAsync(configFile).then((c) => yaml.safeLoad(c))
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return {
+        mode: cli['--mode'],
+        user: cli['--user']
       }
+    }
 
-      throw err
-    })
+    throw err
+  }
 }
 
 const run = async () => {

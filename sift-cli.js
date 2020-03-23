@@ -649,12 +649,14 @@ ${yaml.safeDump(config)}
   if (version !== 'notinstalled') {
     if (semver.lt(semver.coerce(version, { loose: true }), '2019.11.0') === true) {
       if (cli['--mode'] === 'desktop') {
-        cli['--mode'] = 'vm'
+        cli['--mode'] = 'complete'
       } else if (cli['--mode'] === 'server') {
-        cli['--mode'] = 'pkgs'
+        cli['--mode'] = 'packages-only'
       }
     }
   }
+
+  console.log(`> mode: ${cli['--mode']}`)
 
   if (cli['version'] === true) {
     return process.exit(0)

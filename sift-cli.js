@@ -6,8 +6,8 @@ const child_process = bluebird.promisifyAll(require('child_process'))
 const crypto = require('crypto')
 const spawn = require('child_process').spawn
 const docopt = require('docopt').docopt
-const GitHubApi = require('github')
-const mkdirp = bluebird.promisify(require('mkdirp'))
+const { Octokit } = require('@octokit/rest')
+const mkdirp = require('mkdirp')
 const request = require('request')
 const openpgp = require('openpgp')
 const username = require('username')
@@ -119,7 +119,7 @@ let siftConfiguration = {}
 
 const cli = docopt(doc)
 
-const github = new GitHubApi({
+const github = new Octokit({
   version: '3.0.0',
   validateCache: true,
 })
@@ -235,13 +235,21 @@ const setupSalt = async () => {
       await fs.writeFileAsync(aptSourceList, `deb http://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
       await child_process.execAsync(`wget -O - https://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
       await child_process.execAsync('apt-get update')
-      await child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
+      await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-minion', {
+        env: {
+          DEBIAN_FRONTEND: 'noninteractive',
+        },
+      })
     } else if (aptExists === false || saltExists === false) {
       console.log('Installing and configuring SaltStack properly ...')
       await fs.writeFileAsync(aptSourceList, `deb http://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
       await child_process.execAsync(`wget -O - https://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
       await child_process.execAsync('apt-get update')
-      await child_process.execAsync('apt-get install -y --allow-change-held-packages salt-minion')
+      await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-minion', {
+        env: {
+          DEBIAN_FRONTEND: 'noninteractive',
+        },
+      })
     }
   } else {
     return new Promise((resolve, reject) => {
@@ -259,8 +267,8 @@ const getCurrentVersion = () => {
     .then(contents => contents.toString().replace(/\n/g, ''))
 }
 
-const getReleases = () => {
-  return github.repos.getReleases({
+const listReleases = () => {
+  return github.repos.listReleases({
     owner: 'teamdfir',
     repo: 'sift-saltstack'
   })
@@ -268,7 +276,7 @@ const getReleases = () => {
 
 const getValidReleases = async () => {
   const currentRelease = await getCurrentVersion()
-  let releases = await getReleases()
+  let releases = await listReleases()
   const realReleases = releases.data.filter(release => !Boolean(release.prerelease)).map(release => release.tag_name)
   const allReleases = releases.data.map(release => release.tag_name)
 

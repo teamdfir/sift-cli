@@ -16,7 +16,7 @@
   "author": "Erik Kristensen <erik@erikkristensen.com>",
   "license": "MIT",
   "dependencies": {
-    "@octokit/rest": "^18.0.3",
+    "@octokit/rest": "18.0.3",
     "bluebird": "3.7.2",
     "docopt": "0.6.2",
     "github": "14.0.0",

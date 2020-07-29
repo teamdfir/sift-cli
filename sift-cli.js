@@ -114,6 +114,7 @@ let osCodename = null
 let cachePath = '/var/cache/sift/cli'
 let versionFile = '/etc/sift-version'
 let configFile = '/etc/sift-config'
+let releaseFile = '/etc/os-release'
 let siftConfiguration = {}
 
 const cli = docopt(doc)
@@ -136,6 +137,7 @@ const setup = async () => {
     cachePath = '/tmp/var/cache/sift'
     versionFile = '/tmp/sift-version'
     configFile = '/tmp/sift-config'
+    releaseFile = '/tmp/os-release'
   }
 
   await mkdirp(cachePath)
@@ -143,7 +145,7 @@ const setup = async () => {
 
 const validOS = async () => {
   try {
-    const contents = fs.readFileSync('/etc/os-release', 'utf8')
+    const contents = fs.readFileSync(releaseFile, 'utf8')
 
     if (contents.indexOf('UBUNTU_CODENAME=xenial') !== -1) {
       osVersion = '16.04'
@@ -157,10 +159,16 @@ const validOS = async () => {
       return true
     }
 
+    if (contents.indexOf('UBUNTU_CODENAME=focal') !== -1) {
+      osVersion = '20.04'
+      osCodename = 'focal'
+      return true
+    }
+
     throw new Error('invalid OS, unable to determine ubuntu version')
   } catch (err) {
     if (err && err.code === 'ENOENT') {
-      throw new Error('invalid OS, missing /etc/os-release')
+      throw new Error(`invalid OS, missing ${releaseFile}`)
     }
 
     throw err
@@ -637,9 +645,9 @@ ${yaml.safeDump(config)}
 
   checkOptions()
 
-  await validOS()
-
   await setup()
+
+  await validOS()
 
   siftConfiguration = await loadConfiguration()
 

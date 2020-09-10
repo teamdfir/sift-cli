@@ -231,26 +231,26 @@ const setupSalt = async () => {
     if (aptExists === true && saltVersionOk === false) {
       console.log('NOTICE: Fixing incorrect Saltstack version configuration.')
       console.log('Installing and configuring Saltstack properly ...')
-      await child_process.execAsync('apt-get remove -y --allow-change-held-packages salt-minion salt-common')
+      await child_process.execAsync('apt-get remove -y salt-common')
       await fs.writeFileAsync(aptSourceList, `deb [arch=amd64] http://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
       await child_process.execAsync(`wget -O - https://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
       await child_process.execAsync('apt-get update')
-      await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-minion', {
-	      env: {
-		      ...process.env,
-		      DEBIAN_FRONTEND: 'noninteractive',
-	      },
+      await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-common', {
+        env: {
+          ...process.env,
+          DEBIAN_FRONTEND: 'noninteractive',
+        },
       })
     } else if (aptExists === false || saltExists === false) {
       console.log('Installing and configuring SaltStack properly ...')
       await fs.writeFileAsync(aptSourceList, `deb [arch=amd64] http://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
       await child_process.execAsync(`wget -O - https://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
       await child_process.execAsync('apt-get update')
-	    await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-minion', {
-	      env: {
-		      ...process.env,
-		      DEBIAN_FRONTEND: 'noninteractive',
-	      },
+      await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-common', {
+        env: {
+          ...process.env,
+          DEBIAN_FRONTEND: 'noninteractive',
+        },
       })
     }
   } else {

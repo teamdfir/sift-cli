@@ -24,7 +24,7 @@
     "mkdirp": "1.0.4",
     "openpgp": "4.10.8",
     "request": "2.88.2",
-    "semver": "7.3.2",
+    "semver": "7.3.4",
     "split": "1.0.1",
     "username": "5.1.0"
   },

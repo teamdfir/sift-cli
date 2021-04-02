@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: apt-get install -y jo
+      - run: sudo apt-get install -y jo
       - run: mkdir -p release/
       - run: npm run pkg:prep
       - run: npm run pkg:build

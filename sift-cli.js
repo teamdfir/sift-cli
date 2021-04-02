@@ -147,12 +147,6 @@ const validOS = async () => {
   try {
     const contents = fs.readFileSync(releaseFile, 'utf8')
 
-    if (contents.indexOf('UBUNTU_CODENAME=xenial') !== -1) {
-      osVersion = '16.04'
-      osCodename = 'xenial'
-      return true
-    }
-
     if (contents.indexOf('UBUNTU_CODENAME=bionic') !== -1) {
       osVersion = '18.04'
       osCodename = 'bionic'
@@ -221,8 +215,9 @@ const saltCheckVersion = (path, value) => {
 
 const setupSalt = async () => {
   if (cli['--dev'] === false) {
+    const baseUrl = 'https://repo.saltproject.io/py3/ubuntu'
     const aptSourceList = '/etc/apt/sources.list.d/saltstack.list'
-    const aptDebString = `deb [arch=amd64] http://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`
+    const aptDebString = `deb [arch=amd64] ${baseUrl}/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`
 
     const aptExists = await fileExists(aptSourceList)
     const saltExists = await fileExists('/usr/bin/salt-call')
@@ -232,8 +227,8 @@ const setupSalt = async () => {
       console.log('NOTICE: Fixing incorrect Saltstack version configuration.')
       console.log('Installing and configuring Saltstack properly ...')
       await child_process.execAsync('apt-get remove -y --allow-change-held-packages salt-common')
-      await fs.writeFileAsync(aptSourceList, `deb [arch=amd64] http://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
-      await child_process.execAsync(`wget -O - https://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
+      await fs.writeFileAsync(aptSourceList, `deb [arch=amd64] ${baseUrl}/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
+      await child_process.execAsync(`wget -O - ${baseUrl}/${osVersion}/amd64/${saltstackVersion}/salt-archive-keyring.gpg | apt-key add -`)
       await child_process.execAsync('apt-get update')
       await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-common', {
         env: {
@@ -243,8 +238,8 @@ const setupSalt = async () => {
       })
     } else if (aptExists === false || saltExists === false) {
       console.log('Installing and configuring SaltStack properly ...')
-      await fs.writeFileAsync(aptSourceList, `deb [arch=amd64] http://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
-      await child_process.execAsync(`wget -O - https://repo.saltstack.com/py3/ubuntu/${osVersion}/amd64/${saltstackVersion}/SALTSTACK-GPG-KEY.pub | apt-key add -`)
+      await fs.writeFileAsync(aptSourceList, `deb [arch=amd64] ${baseUrl}/${osVersion}/amd64/${saltstackVersion} ${osCodename} main`)
+      await child_process.execAsync(`wget -O - ${baseUrl}/${osVersion}/amd64/${saltstackVersion}/salt-archive-keyring.gpg | apt-key add -`)
       await child_process.execAsync('apt-get update')
       await child_process.execAsync('apt-get install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y --allow-change-held-packages salt-common', {
         env: {

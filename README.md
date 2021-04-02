@@ -6,7 +6,7 @@ Manage your SIFT Installation
 
 ## Usage
 
-```
+```text
 Usage:
   sift [options] list-upgrades [--pre-release]
   sift [options] install [--pre-release] [--version=<version>] [--mode=<mode>] [--user=<user>]

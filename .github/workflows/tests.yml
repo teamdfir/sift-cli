@@ -1,0 +1,32 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test-package:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [15.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: sudo apt-get install -y jo
+      - run: mkdir -p release/
+      - run: npm install
+      - run: npm run pkg:prep
+      - run: npm run pkg:build
+      - run: npm run pkg:hash
+      - run: ./release/sift-cli --version

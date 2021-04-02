@@ -23,9 +23,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: mkdir -p release/
-      - run: npm run prep
-      - run: npm run build
-      - run: npm run hash
+      - run: npm run pkg:prep
+      - run: npm run pkg:build
+      - run: npm run pkg:hash
       - uses: oplik0/openpgp-action@v1
         with:
           text: release/sift-cli-linux.sha256

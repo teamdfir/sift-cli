@@ -35,8 +35,7 @@ jobs:
         uses: oplik0/openpgp-action@v1
         with:
           text: release/sift-cli-linux.sha256
-          key: ${{ secrets.PGP_PUBLIC_KEY }}
-          privateKey: ${{ secrets.PGP_PRIVATE_KEY }}
+          key: ${{ secrets.PGP_PRIVATE_KEY }}
       - run: echo "$envEncryptedText" > release/sift-cli-linux.sha256.asc
       - name: release
         if: startsWith(github.ref, 'refs/tags/')

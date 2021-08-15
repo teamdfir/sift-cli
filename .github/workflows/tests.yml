@@ -28,5 +28,4 @@ jobs:
       - run: npm install
       - run: npm run pkg:prep
       - run: npm run pkg:build
-      - run: npm run pkg:hash
       - run: ./release/sift-cli-linux -v

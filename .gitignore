@@ -3,3 +3,4 @@ release
 config.json
 .*rc
 extras
+*.key

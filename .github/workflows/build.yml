@@ -27,7 +27,7 @@ jobs:
         with:
           cosign-release: "v1.0.0"
       - name: install cosign private key
-        run: 'echo "$COSIGN_KEY" > /cosign.key'
+        run: 'echo "$COSIGN_KEY" > cosign.key'
         shell: bash
         env:
           COSIGN_KEY: ${{secrets.COSIGN_KEY}}
@@ -37,7 +37,7 @@ jobs:
       - run: npm run pkg:prep
       - run: npm run pkg:build
       - run: |
-          echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key /cosign.key release/sift-cli-linux > release/sift-cli-linux.sig
+          echo -n "${{secrets.COSIGN_PASSWORD}}" | cosign sign-blob -key cosign.key release/sift-cli-linux > release/sift-cli-linux.sig
       - run: |
           cp cosign.pub release/sift-cli.pub
       - name: release

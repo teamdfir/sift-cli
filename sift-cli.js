@@ -14,6 +14,7 @@ const username = require('username')
 const readline = require('readline')
 const split = require('split')
 const semver = require('semver')
+const ProxyAgent = require("proxy-agent")
 
 /**
  * Setup Custom YAML Parsing
@@ -38,7 +39,8 @@ Usage:
   sift [options] upgrade [--pre-release] [--mode=<mode>] [--user=<user>]
   sift [options] self-upgrade [--pre-release]
   sift [options] version
-  sift [options] debug
+  sift [options] debug [--show-env]
+  sift [options] doctor
   sift -h | --help | -v
 
 Options:
@@ -121,7 +123,9 @@ const cli = docopt(doc)
 
 const github = new Octokit({
   version: '3.0.0',
-  validateCache: true,
+  request: {
+    agent: new ProxyAgent(),
+  },
 })
 
 const error = (err) => {
@@ -635,6 +639,25 @@ Config:
 ${yaml.safeDump(config)}
 `
     console.log(debug)
+
+    if (cli['--show-env'] === true) {
+      console.log(process.env)
+    }
+
+    return process.exit(0)
+  }
+
+  if (cli['doctor'] === true) {
+    try {
+      console.log(`> testing github connection`)
+      const repos = await github.repos.listForOrg({
+        org: 'teamdfir',
+      });
+      console.log(`>>> success`)
+    } catch (err) {
+      console.log(`!! ERROR - ${err}`)
+    }
+
     return process.exit(0)
   }
 

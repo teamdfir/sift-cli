@@ -8,7 +8,7 @@
   },
   "scripts": {
     "pkg:prep": "jo version=$(bash .ci/version) > config.json",
-    "pkg:build": "pkg -t node14-linux --out-dir release package.json && cd release && mv sift-cli sift-cli-linux",
+    "pkg:build": "pkg -t node14-linux,node14-darwin --out-dir release package.json && cd release && mv sift-cli sift-cli-linux",
     "pkg": "npm run pkg:prep && npm run pkg:build"
   },
   "author": "Erik Kristensen <erik@erikkristensen.com>",
@@ -21,6 +21,7 @@
     "js-yaml": "3.14.1",
     "mkdirp": "1.0.4",
     "openpgp": "4.10.10",
+    "proxy-agent": "^5.0.0",
     "request": "2.88.2",
     "semver": "7.3.5",
     "split": "1.0.1",

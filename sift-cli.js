@@ -111,6 +111,7 @@ Try running 'apt-get update' then remove any packages that
 aren't used by running 'apt-get autoremove'
 `
 
+let unsupportedOS = true
 let osVersion = null
 let osCodename = null
 let cachePath = '/var/cache/sift/cli'
@@ -154,12 +155,21 @@ const validOS = async () => {
     if (contents.indexOf('UBUNTU_CODENAME=bionic') !== -1) {
       osVersion = '18.04'
       osCodename = 'bionic'
+      unsupportedOS = false
       return true
     }
 
     if (contents.indexOf('UBUNTU_CODENAME=focal') !== -1) {
       osVersion = '20.04'
       osCodename = 'focal'
+      unsupportedOS = false
+      return true
+    }
+
+    if (contents.indexOf('UBUNTU_CODENAME=hirsute') !== -1) {
+      osVersion = '21.04'
+      osCodename = 'hirsute'
+      unsupportedOS = true
       return true
     }
 
@@ -676,6 +686,10 @@ ${yaml.safeDump(config)}
   await setup()
 
   await validOS()
+
+  if (unsupportedOS === true) {
+    console.log('WARNING: unsupported OS detected, you may encounter bugs or things that do not work!')
+  }
 
   siftConfiguration = await loadConfiguration()
 

@@ -25,7 +25,7 @@
     "request": "2.88.2",
     "semver": "7.3.5",
     "split": "1.0.1",
-    "username": "5.1.0"
+    "username": "6.0.0"
   },
   "devDependencies": {
     "pkg": "5.4.0"

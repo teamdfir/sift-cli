@@ -28,11 +28,12 @@
     "username": "5.1.0"
   },
   "devDependencies": {
-    "pkg": "5.4.0"
+    "pkg": "^5.4.0"
   },
   "pkg": {
     "scripts": [
-      "node_modules/github/lib/routes.json"
+      "node_modules/github/lib/routes.json",
+      "node_modules/vm2/lib/contextify.js"
     ]
   },
   "false": {}

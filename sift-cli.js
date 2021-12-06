@@ -440,12 +440,17 @@ const validateSignature = async (version, filename) => {
 const extractUpdate = (version, filename) => {
   const filepath = `${cachePath}/${version}/${filename}`
 
+  const extractPath = `${cachePath}/${version}`
+  if (semver.gt(semver.coerce(version, { loose: true }), '2021.9.0')) {
+    extractPath = `${extractPath}/sift`
+  }
+
   return new Promise((resolve, reject) => {
     console.log(`> extracting update ${filename}`)
 
     let stdout = ''
     let stderr = ''
-    const extract = spawn('tar', ['-z', '-x', '-f', filepath, '-C', `${cachePath}/${version}`])
+    const extract = spawn('tar', ['-z', '-x', '-f', filepath, '-C', extractPath])
     extract.stdout.on('data', (data) => {
       stdout = `${stdout}${data}`
       console.log(data.toString())

@@ -16,11 +16,6 @@ fi
 BRANCH=$(git symbolic-ref HEAD 2> /dev/null)
 BRANCH=${BRANCH##refs/heads/}
 
-if [ "${BRANCH}" != "master" ]; then
-  echo "You must only be on the master branch"
-  exit 12
-fi
-
 if [ $(echo ${TAG} | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$") ]; then
   VALID_TAG=true
 fi

@@ -52,7 +52,7 @@ Options:
   --verbose             Display verbose logging
 `
 
-const saltstackVersion = '3001'
+const saltstackVersion = '3004'
 const pubKey = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Comment: GPGTools - http://gpgtools.org

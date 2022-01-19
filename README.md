@@ -38,7 +38,7 @@ Open issues over at the main [SIFT Repository](https://github.com/sans-dfir/sift
     * sift-cli-linux.sig
     * sift-cli.pub
 3. Install [cosign](https://github.com/sigstore/cosign/releases/latest)
-4. Validate the signature `cosign verify-blob -key sift-cli.pub -signature sift-cli-linux.sig sift-cli-linux`
+4. Validate the signature `cosign verify-blob --key sift-cli.pub --signature sift-cli-linux.sig sift-cli-linux`
 5. Move the file to `sudo mv sift-cli-linux /usr/local/bin/sift`
 6. Run `chmod 755 /usr/local/bin/sift`
 7. Type `sift --help` to see its usage

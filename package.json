@@ -23,7 +23,7 @@
     "openpgp": "4.10.10",
     "proxy-agent": "5.0.0",
     "request": "2.88.2",
-    "semver": "7.3.7",
+    "semver": "7.3.8",
     "split": "1.0.1",
     "username": "5.1.0"
   },

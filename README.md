@@ -1,3 +1,5 @@
+# DEPRECATION NOTE: This project will be deprecated on March 1, 2023. It is being replace with [cast](https://github.com/ekristen/cast) which is a single smaller binary capable of installing any cast compatible distribution such as SIFT or REMnux (and more soon).
+
 ![Logo](https://images.contentstack.io/v3/assets/blt36c2e63521272fdc/blt3e371eacc79a3ca4/60a5393fe2db156d00f0b8ab/400x460_DFIR_SIFT.jpg)
 
 # SIFT CLI

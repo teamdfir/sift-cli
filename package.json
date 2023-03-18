@@ -28,7 +28,7 @@
     "username": "5.1.0"
   },
   "devDependencies": {
-    "pkg": "5.8.0"
+    "pkg": "5.8.1"
   },
   "pkg": {
     "scripts": [
